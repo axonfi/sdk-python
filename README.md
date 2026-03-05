@@ -19,7 +19,7 @@ When you register a bot on the [Axon dashboard](https://app.axonfi.xyz), it gene
 ```python
 import json
 from eth_account import Account
-from axonfi import AxonClient
+from axonfi import AxonClient, Chain
 
 # Load encrypted keystore file (downloaded from the dashboard)
 with open("bot-keystore.json") as f:
@@ -30,7 +30,7 @@ private_key = Account.decrypt(keystore, "your-passphrase")
 
 client = AxonClient(
     vault_address="0x...",
-    chain_id=84532,           # Base Sepolia
+    chain_id=Chain.BaseSepolia,
     bot_private_key="0x" + private_key.hex(),
 )
 
@@ -48,11 +48,11 @@ print(result.status, result.tx_hash)
 ### Option 2: Raw private key (for quick testing)
 
 ```python
-from axonfi import AxonClient
+from axonfi import AxonClient, Chain
 
 client = AxonClient(
     vault_address="0x...",
-    chain_id=84532,           # Base Sepolia
+    chain_id=Chain.BaseSepolia,
     bot_private_key="0x...",  # From env var or .env file — never hardcode
 )
 
@@ -64,11 +64,11 @@ result = await client.pay(to="0x...", token="USDC", amount=5)
 Both options work with the sync client too — just swap `AxonClient` for `AxonClientSync`:
 
 ```python
-from axonfi import AxonClientSync
+from axonfi import AxonClientSync, Chain
 
 client = AxonClientSync(
     vault_address="0x...",
-    chain_id=84532,
+    chain_id=Chain.BaseSepolia,
     bot_private_key="0x...",
 )
 
