@@ -19,7 +19,7 @@ When you register a bot on the [Axon dashboard](https://app.axonfi.xyz), it gene
 ```python
 import json
 from eth_account import Account
-from axonfi import AxonClient, Chain
+from axonfi import AxonClient, Chain, Token
 
 # Load encrypted keystore file (downloaded from the dashboard)
 with open("bot-keystore.json") as f:
@@ -37,7 +37,7 @@ client = AxonClient(
 # Pay 5 USDC — SDK handles decimals automatically
 result = await client.pay(
     to="0x...recipient...",
-    token="USDC",
+    token=Token.USDC,
     amount=5,
     memo="API call #1234 — weather data",
 )
@@ -56,7 +56,7 @@ client = AxonClient(
     bot_private_key="0x...",  # From env var or .env file — never hardcode
 )
 
-result = await client.pay(to="0x...", token="USDC", amount=5)
+result = await client.pay(to="0x...", token=Token.USDC, amount=5)
 ```
 
 ### Synchronous Usage (LangChain, CrewAI)
@@ -64,7 +64,7 @@ result = await client.pay(to="0x...", token="USDC", amount=5)
 Both options work with the sync client too — just swap `AxonClient` for `AxonClientSync`:
 
 ```python
-from axonfi import AxonClientSync, Chain
+from axonfi import AxonClientSync, Chain, Token
 
 client = AxonClientSync(
     vault_address="0x...",
@@ -72,7 +72,7 @@ client = AxonClientSync(
     bot_private_key="0x...",
 )
 
-result = client.pay(to="0x...", token="USDC", amount=5)
+result = client.pay(to="0x...", token=Token.USDC, amount=5)
 ```
 
 ## Features
