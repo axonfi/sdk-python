@@ -10,6 +10,24 @@ Axon lets bot operators deploy non-custodial vaults, register bot public keys, d
 pip install axonfi
 ```
 
+## Prerequisites
+
+Before using the SDK, you need an Axon vault with a registered bot:
+
+1. **Deploy a vault** — Go to [app.axonfi.xyz](https://app.axonfi.xyz), connect your wallet, and deploy a vault on your target chain. The vault is a non-custodial smart contract — only you (the owner) can withdraw funds.
+
+2. **Fund the vault** — Send USDC (or any ERC-20) to your vault address. Anyone can deposit directly to the contract.
+
+3. **Register a bot** — In the dashboard, go to your vault → Bots → Add Bot. You can either:
+   - **Generate a new keypair** (recommended) — the dashboard creates a key and downloads an encrypted keystore JSON file. You set the passphrase.
+   - **Bring your own key** — paste an existing public key if you manage keys externally.
+
+4. **Configure policies** — Set per-transaction caps, daily spending limits, velocity windows, and destination whitelists. The bot can only operate within these bounds.
+
+5. **Get the bot key** — Your agent needs the bot's private key to sign payment intents. Use the keystore file + passphrase (recommended) or export the raw private key for quick testing.
+
+The vault owner's wallet stays secure — the bot key can only sign intents within the policies you configure, and can be revoked instantly from the dashboard.
+
 ## Quick Start
 
 ### Option 1: Keystore file + passphrase (recommended)
