@@ -56,10 +56,7 @@ def _to_config_params(config: BotConfigInput) -> tuple:
     return (
         round(config.max_per_tx_amount * USDC_UNIT),
         round(config.max_rebalance_amount * USDC_UNIT),
-        [
-            (round(sl.amount * USDC_UNIT), sl.max_count, sl.window_seconds)
-            for sl in config.spending_limits
-        ],
+        [(round(sl.amount * USDC_UNIT), sl.max_count, sl.window_seconds) for sl in config.spending_limits],
         round(config.ai_trigger_threshold * USDC_UNIT),
         config.require_ai_verification,
     )
@@ -191,9 +188,7 @@ def update_bot_config(
     vault = w3.eth.contract(address=Web3.to_checksum_address(vault_address), abi=AXON_VAULT_ABI)
     params = _to_config_params(config)
 
-    tx = vault.functions.updateBotConfig(
-        Web3.to_checksum_address(bot_address), params
-    ).build_transaction(
+    tx = vault.functions.updateBotConfig(Web3.to_checksum_address(bot_address), params).build_transaction(
         {
             "from": account.address,
             "nonce": w3.eth.get_transaction_count(account.address),
