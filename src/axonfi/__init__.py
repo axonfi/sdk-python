@@ -81,7 +81,7 @@ from .x402 import (
     parse_payment_required,
 )
 
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 
 __all__ = [
     # Client
