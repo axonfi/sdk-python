@@ -544,7 +544,7 @@ class AxonClient:
         return ExecuteIntent(
             bot=self.bot_address,
             protocol=inp.protocol,
-            calldata_hash=Web3.keccak(hexstr=inp.call_data).hex(),
+            calldata_hash="0x" + Web3.keccak(hexstr=inp.call_data).hex(),
             token=resolve_token(inp.token, self.chain_id),
             amount=parse_amount(inp.amount, inp.token),
             deadline=inp.deadline or self._default_deadline(),
