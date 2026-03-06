@@ -75,10 +75,10 @@ add_bot(w3, owner, vault_address, bot_address, BotConfigInput(
 
 # ── 5. Deposit funds (on-chain tx, ~0.0005 ETH gas) ───────────────
 # Option A: Deposit ETH (vault accepts native ETH directly)
-deposit(w3, owner, vault_address, "ETH", Web3.to_wei(0.1, "ether"))
+deposit(w3, owner, vault_address, "ETH", 0.1)
 
 # Option B: Deposit USDC (SDK handles approve + deposit)
-deposit(w3, owner, vault_address, "USDC", 500_000_000)  # 500 USDC
+deposit(w3, owner, vault_address, "USDC", 500.0)  # 500 USDC
 
 # ── 6. Bot is ready — gasless from here ────────────────────────────
 # Save bot_key securely. The bot never needs ETH.

@@ -10,6 +10,7 @@ from web3 import Web3
 from web3.types import TxReceipt
 
 from .abis import AXON_VAULT_ABI, AXON_VAULT_FACTORY_ABI, ERC20_ABI
+from .amounts import parse_amount
 from .constants import NATIVE_ETH, RELAYER_URL
 from .tokens import resolve_token
 
@@ -237,7 +238,7 @@ def deposit(
     account: Any,
     vault_address: str,
     token: str,
-    amount: int,
+    amount: int | float | str,
     *,
     chain_id: int | None = None,
     ref: bytes = ZERO_REF,
@@ -246,15 +247,19 @@ def deposit(
 
     Permissionless — anyone can deposit. For ERC-20 tokens, this function
     handles the approve + deposit in one call. For native ETH, pass
-    NATIVE_ETH as the token.
+    ``'ETH'`` or ``NATIVE_ETH`` as the token.
+
+    Amounts are human-friendly when passed as ``float`` or ``str``
+    (e.g. ``500.0`` or ``"500"`` for 500 USDC). Plain ``int`` is treated
+    as raw base units for backwards compatibility.
 
     Args:
         w3: Web3 instance connected to the vault's chain.
         account: Wallet sending the deposit (anyone, not just owner).
         vault_address: Vault to deposit into.
         token: Token symbol ('USDC', 'WETH'), raw address, NATIVE_ETH, or 'ETH' for ETH deposits.
-        amount: Amount in base units (e.g. 5_000_000 for 5 USDC, 10**16 for 0.01 ETH).
-        chain_id: Chain ID for token symbol resolution. Required if using a symbol instead of an address.
+        amount: Human-readable (float/str, e.g. 500.0 for 500 USDC) or raw base units (int).
+        chain_id: Chain ID for token symbol resolution. Falls back to ``w3.eth.chain_id``.
         ref: Optional bytes32 reference. Defaults to zero bytes.
 
     Returns:
@@ -274,11 +279,17 @@ def deposit(
 
     is_eth = token_address.lower() == NATIVE_ETH.lower()
 
+    # Resolve human-readable amount to base units
+    if is_eth:
+        resolved_amount = parse_amount(amount, "WETH")  # ETH has same 18 decimals as WETH
+    else:
+        resolved_amount = parse_amount(amount, token)
+
     if not is_eth:
         # ERC-20: approve the vault to pull tokens, then deposit
         token_addr = Web3.to_checksum_address(token_address)
         erc20 = w3.eth.contract(address=token_addr, abi=ERC20_ABI)
-        approve_tx = erc20.functions.approve(vault_addr, amount).build_transaction(
+        approve_tx = erc20.functions.approve(vault_addr, resolved_amount).build_transaction(
             {
                 "from": account.address,
                 "nonce": w3.eth.get_transaction_count(account.address),
@@ -293,10 +304,10 @@ def deposit(
         "nonce": w3.eth.get_transaction_count(account.address),
     }
     if is_eth:
-        tx_params["value"] = amount
+        tx_params["value"] = resolved_amount
 
     token_for_contract = Web3.to_checksum_address(token_address)
-    tx = vault.functions.deposit(token_for_contract, amount, ref).build_transaction(tx_params)
+    tx = vault.functions.deposit(token_for_contract, resolved_amount, ref).build_transaction(tx_params)
     signed = account.sign_transaction(tx)
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
     w3.eth.wait_for_transaction_receipt(tx_hash)
