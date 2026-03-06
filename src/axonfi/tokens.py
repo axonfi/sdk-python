@@ -215,7 +215,18 @@ KNOWN_TOKENS: dict[str, KnownToken] = {
 }
 
 # Tokens pre-approved globally via AxonRegistry as default tokens.
-DEFAULT_APPROVED_TOKENS: list[str] = ["USDC", "USDT", "DAI", "WETH", "WBTC", "cbBTC", "wstETH", "weETH", "cbETH", "rETH"]
+DEFAULT_APPROVED_TOKENS: list[str] = [
+    "USDC",
+    "USDT",
+    "DAI",
+    "WETH",
+    "WBTC",
+    "cbBTC",
+    "wstETH",
+    "weETH",
+    "cbETH",
+    "rETH",
+]
 
 
 def get_default_approved_tokens(chain_id: int) -> list[str]:
