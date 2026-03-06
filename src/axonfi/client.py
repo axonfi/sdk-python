@@ -29,6 +29,16 @@ from .types import (
     TosStatus,
     VaultInfo,
 )
+from .x402 import (
+    X402HandleResult,
+    X402PaymentOption,
+    extract_x402_metadata,
+    find_matching_option,
+    format_payment_signature,
+    parse_payment_required,
+)
+from .eip3009 import USDC_EIP712_DOMAIN, random_nonce, sign_transfer_with_authorization
+from .permit2 import X402_PROXY_ADDRESS, random_permit2_nonce, sign_permit2_witness_transfer
 
 
 class AxonClient:
@@ -197,6 +207,192 @@ class AxonClient:
             self._private_key, self.vault_address, self.chain_id, intent
         )
         return await self._submit_swap(intent, signature, inp)
+
+    # ========================================================================
+    # x402 (HTTP 402 Payment Required)
+    # ========================================================================
+
+    async def x402_fund(
+        self,
+        amount: int,
+        token: str | None = None,
+        *,
+        resource_url: str | None = None,
+        memo: str | None = None,
+        recipient_label: str | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> PaymentResult:
+        """Fund the bot's EOA from the vault for x402 settlement.
+
+        This is a regular Axon payment (to = bot's own address) that goes through
+        the full pipeline: policy engine, AI scan, human review if needed.
+        """
+        token_address = token or USDC.get(self.chain_id)
+        if not token_address:
+            raise ValueError(f"No default USDC address for chain {self.chain_id}")
+
+        return await self.pay(
+            to=self.bot_address,
+            token=token_address,
+            amount=amount,
+            x402_funding=True,
+            resource_url=resource_url,
+            memo=memo,
+            recipient_label=recipient_label,
+            metadata=metadata,
+        )
+
+    async def x402_handle_payment_required(
+        self,
+        headers: dict[str, str],
+        max_timeout_ms: int = 120_000,
+        poll_interval_ms: int = 5_000,
+    ) -> X402HandleResult:
+        """Handle a full x402 flow: parse header, fund bot, sign authorization, return header.
+
+        Supports both EIP-3009 (USDC) and Permit2 (any ERC-20) settlement.
+        The bot's EOA is funded from the vault first (full Axon pipeline applies).
+
+        Args:
+            headers: Response headers dict (must contain ``payment-required`` or ``PAYMENT-REQUIRED``).
+            max_timeout_ms: Maximum time to wait for pending_review resolution (default: 120s).
+            poll_interval_ms: Polling interval for pending_review (default: 5s).
+
+        Returns:
+            ``X402HandleResult`` with payment signature, selected option, and funding details.
+        """
+        # 1. Parse header
+        header_value = headers.get("payment-required") or headers.get("PAYMENT-REQUIRED")
+        if not header_value:
+            raise ValueError("x402: no PAYMENT-REQUIRED header found")
+
+        parsed = parse_payment_required(header_value)
+
+        # 2. Find matching option for this chain
+        option = find_matching_option(parsed.accepts, self.chain_id)
+        if not option:
+            networks = ", ".join(a.network for a in parsed.accepts)
+            raise ValueError(
+                f"x402: no payment option matches chain {self.chain_id}. Available: {networks}"
+            )
+
+        # 3. Extract metadata
+        x402_meta = extract_x402_metadata(parsed, option)
+
+        # 4. Fund bot's EOA from vault
+        amount = int(option.amount)
+        token_address = option.asset
+
+        funding_result = await self.pay(
+            to=self.bot_address,
+            token=token_address,
+            amount=amount,
+            x402_funding=True,
+            resource_url=x402_meta.get("resource_url"),
+            memo=x402_meta.get("memo"),
+            recipient_label=x402_meta.get("recipient_label"),
+            metadata=x402_meta.get("metadata"),
+        )
+
+        # 5. Poll if pending_review
+        if funding_result.status == "pending_review":
+            import asyncio
+
+            deadline_ts = time.time() * 1000 + max_timeout_ms
+            while funding_result.status == "pending_review" and time.time() * 1000 < deadline_ts:
+                await asyncio.sleep(poll_interval_ms / 1000)
+                funding_result = await self.poll(funding_result.request_id)
+            if funding_result.status == "pending_review":
+                raise RuntimeError(
+                    f"x402: funding timed out after {max_timeout_ms}ms (still pending_review)"
+                )
+
+        if funding_result.status == "rejected":
+            raise RuntimeError(
+                f"x402: funding rejected — {funding_result.reason or 'unknown reason'}"
+            )
+
+        # 6. Sign appropriate authorization
+        pay_to = option.pay_to
+        usdc_address = (USDC.get(self.chain_id) or "").lower()
+        is_usdc = token_address.lower() == usdc_address
+
+        if is_usdc and self.chain_id in USDC_EIP712_DOMAIN:
+            # EIP-3009 path (USDC — gasless)
+            nonce = random_nonce()
+            valid_after = 0
+            valid_before = int(time.time()) + 300  # 5 min
+
+            sig = sign_transfer_with_authorization(
+                self._private_key,
+                self.chain_id,
+                from_address=self.bot_address,
+                to=pay_to,
+                value=amount,
+                valid_after=valid_after,
+                valid_before=valid_before,
+                nonce=nonce,
+            )
+
+            signature_payload = {
+                "scheme": "exact",
+                "signature": sig,
+                "authorization": {
+                    "from": self.bot_address,
+                    "to": pay_to,
+                    "value": str(amount),
+                    "validAfter": str(valid_after),
+                    "validBefore": str(valid_before),
+                    "nonce": nonce,
+                },
+            }
+        else:
+            # Permit2 path (any ERC-20)
+            nonce = random_permit2_nonce()
+            deadline = int(time.time()) + 300
+
+            sig = sign_permit2_witness_transfer(
+                self._private_key,
+                self.chain_id,
+                token=token_address,
+                amount=amount,
+                spender=X402_PROXY_ADDRESS,
+                nonce=nonce,
+                deadline=deadline,
+                witness_to=pay_to,
+                witness_requested_amount=amount,
+            )
+
+            signature_payload = {
+                "scheme": "permit2",
+                "signature": sig,
+                "permit": {
+                    "permitted": {"token": token_address, "amount": str(amount)},
+                    "spender": X402_PROXY_ADDRESS,
+                    "nonce": str(nonce),
+                    "deadline": str(deadline),
+                },
+                "witness": {
+                    "to": pay_to,
+                    "requestedAmount": str(amount),
+                },
+            }
+
+        # 7. Format PAYMENT-SIGNATURE header
+        payment_signature = format_payment_signature(signature_payload)
+
+        funding_data: dict = {
+            "requestId": funding_result.request_id,
+            "status": funding_result.status,
+        }
+        if funding_result.tx_hash:
+            funding_data["txHash"] = funding_result.tx_hash
+
+        return X402HandleResult(
+            payment_signature=payment_signature,
+            selected_option=option,
+            funding_result=funding_data,
+        )
 
     # ========================================================================
     # Read helpers
@@ -588,6 +784,23 @@ class AxonClientSync:
 
     def get_rebalance_tokens(self) -> RebalanceTokensResult:
         return self._run(self._async_client.get_rebalance_tokens())
+
+    def x402_fund(self, amount: int, token: str | None = None, **kwargs) -> PaymentResult:
+        return self._run(self._async_client.x402_fund(amount, token, **kwargs))
+
+    def x402_handle_payment_required(
+        self,
+        headers: dict[str, str],
+        max_timeout_ms: int = 120_000,
+        poll_interval_ms: int = 5_000,
+    ):
+        from .x402 import X402HandleResult
+
+        return self._run(
+            self._async_client.x402_handle_payment_required(
+                headers, max_timeout_ms, poll_interval_ms
+            )
+        )
 
     def poll(self, request_id: str) -> PaymentResult:
         return self._run(self._async_client.poll(request_id))
