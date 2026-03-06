@@ -187,12 +187,19 @@ Supports EIP-3009 (USDC, gasless) and Permit2 (any ERC-20) settlement schemes.
 
 ## Supported Chains
 
-| Chain | ID | Status |
-|-------|----|--------|
-| Base | 8453 | Mainnet |
-| Base Sepolia | 84532 | Testnet |
-| Arbitrum One | 42161 | Mainnet |
-| Arbitrum Sepolia | 421614 | Testnet |
+### Mainnet
+
+| Chain        | ID    |
+| ------------ | ----- |
+| Base         | 8453  |
+| Arbitrum One | 42161 |
+
+### Testnet
+
+| Chain            | ID     |
+| ---------------- | ------ |
+| Base Sepolia     | 84532  |
+| Arbitrum Sepolia | 421614 |
 
 ## Links
 
