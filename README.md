@@ -10,21 +10,83 @@ Axon lets bot operators deploy non-custodial vaults, register bot public keys, d
 pip install axonfi
 ```
 
-## Prerequisites
+## Setup
 
-Before using the SDK, you need an Axon vault with a registered bot:
+There are two ways to set up an Axon vault: through the **dashboard** (UI) or entirely through the **SDK** (programmatic). Both produce the same on-chain result.
 
-1. **Deploy a vault** — Go to [app.axonfi.xyz](https://app.axonfi.xyz), connect your wallet, and deploy a vault on your target chain. The vault is a non-custodial smart contract — only you (the owner) can withdraw funds.
+### Option A: Dashboard Setup
 
-2. **Fund the vault** — Send USDC (or any ERC-20) to your vault address. Anyone can deposit directly to the contract.
+1. Go to [app.axonfi.xyz](https://app.axonfi.xyz), connect your wallet, deploy a vault
+2. Fund the vault — send USDC, ETH, or any ERC-20 to the vault address
+3. Register a bot — generate a keypair or bring your own key
+4. Configure policies — per-tx caps, daily limits, AI threshold, whitelists
+5. Give the bot key to your agent
 
-3. **Register a bot** — In the dashboard, go to your vault → Bots → Add Bot. You can either:
-   - **Generate a new keypair** (recommended) — the dashboard creates a key and downloads an encrypted keystore JSON file. You set the passphrase.
-   - **Bring your own key** — paste an existing public key if you manage keys externally.
+### Option B: Full SDK Setup (Programmatic)
 
-4. **Configure policies** — Set per-transaction caps, daily spending limits, velocity windows, and destination whitelists. The bot can only operate within these bounds.
+Everything can be done from code — no dashboard needed. An agent can bootstrap its own vault end-to-end.
 
-5. **Get the bot key** — Your agent needs the bot's private key to sign payment intents. Use the keystore file + passphrase (recommended) or export the raw private key for quick testing.
+```python
+from eth_account import Account
+from web3 import Web3
+from axonfi import (
+    deploy_vault, add_bot, deposit, BotConfigInput, SpendingLimitInput,
+    Chain, NATIVE_ETH, USDC, WINDOW_ONE_DAY,
+)
+
+# ── 1. Owner wallet (funded with ETH for gas) ─────────────────────
+owner = Account.from_key("0x...")  # or Account.create()
+chain_id = Chain.BaseSepolia
+w3 = Web3(Web3.HTTPProvider("https://sepolia.base.org"))
+
+# ── 2. Deploy vault (on-chain tx, ~0.001 ETH gas) ─────────────────
+vault_address = deploy_vault(w3, owner, chain_id)
+print("Vault deployed:", vault_address)
+
+# ── 3. Generate a bot keypair ──────────────────────────────────────
+bot_account = Account.create()
+bot_key = bot_account.key.hex()
+bot_address = bot_account.address
+
+# ── 4. Register the bot on the vault (on-chain tx, ~0.0005 ETH gas)
+add_bot(w3, owner, vault_address, bot_address, BotConfigInput(
+    max_per_tx_amount=100,                # $100 hard cap per tx
+    max_rebalance_amount=0,               # no rebalance cap
+    spending_limits=[SpendingLimitInput(
+        amount=1000,                      # $1,000/day rolling limit
+        max_count=0,                      # no tx count limit
+        window_seconds=WINDOW_ONE_DAY,
+    )],
+    ai_trigger_threshold=50,             # AI scan above $50
+    require_ai_verification=False,
+))
+
+# ── 5. Deposit funds (on-chain tx, ~0.0005 ETH gas) ───────────────
+# Option A: Deposit ETH (vault accepts native ETH directly)
+deposit(w3, owner, vault_address, NATIVE_ETH, Web3.to_wei(0.1, "ether"))
+
+# Option B: Deposit USDC (SDK handles approve + deposit)
+deposit(w3, owner, vault_address, USDC[chain_id], 500_000_000)  # 500 USDC
+
+# ── 6. Bot is ready — gasless from here ────────────────────────────
+# Save bot_key securely. The bot never needs ETH.
+```
+
+### What Needs Gas vs. What's Gasless
+
+| Step | Who pays gas | Notes |
+|------|-------------|-------|
+| Deploy vault | Owner | ~0.001 ETH. One-time. |
+| Accept ToS | Owner | Wallet signature only (no gas). |
+| Register bot | Owner | ~0.0005 ETH. One per bot. |
+| Configure bot | Owner | ~0.0003 ETH. Only when changing limits. |
+| Deposit ETH | Depositor | Anyone can deposit. ETH sent directly. |
+| Deposit ERC-20 | Depositor | Anyone can deposit. SDK handles approve + deposit. |
+| **Pay** | **Free (relayer)** | **Bot signs EIP-712 intent. Axon pays gas.** |
+| **Execute (DeFi)** | **Free (relayer)** | **Bot signs intent. Axon pays gas.** |
+| **Swap (rebalance)** | **Free (relayer)** | **Bot signs intent. Axon pays gas.** |
+
+**The key insight:** Setup operations (deploy, add bot, deposit) require gas from the owner. Once setup is complete, all bot operations (payments, DeFi, swaps) are gasless — the bot never needs ETH. The relayer pays all execution gas.
 
 The vault owner's wallet stays secure — the bot key can only sign intents within the policies you configure, and can be revoked instantly from the dashboard.
 

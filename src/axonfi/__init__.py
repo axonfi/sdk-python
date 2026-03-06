@@ -60,6 +60,15 @@ from .types import (
     TosStatus,
     VaultInfo,
 )
+from .vault import (
+    BotConfigInput,
+    SpendingLimitInput,
+    add_bot,
+    deploy_vault,
+    deposit,
+    remove_bot,
+    update_bot_config,
+)
 from .x402 import (
     X402HandleResult,
     X402PaymentOption,
@@ -72,7 +81,7 @@ from .x402 import (
     parse_payment_required,
 )
 
-__version__ = "0.2.1"
+__version__ = "0.2.5"
 
 __all__ = [
     # Client
@@ -138,6 +147,14 @@ __all__ = [
     "random_permit2_nonce",
     "PERMIT2_ADDRESS",
     "X402_PROXY_ADDRESS",
+    # Vault operations
+    "deploy_vault",
+    "add_bot",
+    "update_bot_config",
+    "remove_bot",
+    "deposit",
+    "BotConfigInput",
+    "SpendingLimitInput",
     # x402
     "parse_payment_required",
     "parse_chain_id",

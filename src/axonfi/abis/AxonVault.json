@@ -1,0 +1,76 @@
+[
+  {
+    "type": "function",
+    "name": "addBot",
+    "inputs": [
+      { "name": "bot", "type": "address" },
+      {
+        "name": "params",
+        "type": "tuple",
+        "components": [
+          { "name": "maxPerTxAmount", "type": "uint256" },
+          { "name": "maxRebalanceAmount", "type": "uint256" },
+          {
+            "name": "spendingLimits",
+            "type": "tuple[]",
+            "components": [
+              { "name": "amount", "type": "uint256" },
+              { "name": "maxCount", "type": "uint256" },
+              { "name": "windowSeconds", "type": "uint256" }
+            ]
+          },
+          { "name": "aiTriggerThreshold", "type": "uint256" },
+          { "name": "requireAiVerification", "type": "bool" }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "updateBotConfig",
+    "inputs": [
+      { "name": "bot", "type": "address" },
+      {
+        "name": "params",
+        "type": "tuple",
+        "components": [
+          { "name": "maxPerTxAmount", "type": "uint256" },
+          { "name": "maxRebalanceAmount", "type": "uint256" },
+          {
+            "name": "spendingLimits",
+            "type": "tuple[]",
+            "components": [
+              { "name": "amount", "type": "uint256" },
+              { "name": "maxCount", "type": "uint256" },
+              { "name": "windowSeconds", "type": "uint256" }
+            ]
+          },
+          { "name": "aiTriggerThreshold", "type": "uint256" },
+          { "name": "requireAiVerification", "type": "bool" }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "removeBot",
+    "inputs": [{ "name": "bot", "type": "address" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deposit",
+    "inputs": [
+      { "name": "token", "type": "address" },
+      { "name": "amount", "type": "uint256" },
+      { "name": "ref", "type": "bytes32" }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  }
+]
