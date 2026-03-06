@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from .constants import USDC
@@ -98,9 +98,7 @@ def parse_chain_id(network: str) -> int:
     """
     parts = network.split(":")
     if len(parts) != 2 or parts[0] != "eip155":
-        raise ValueError(
-            f'x402: unsupported network format "{network}" (expected "eip155:<chainId>")'
-        )
+        raise ValueError(f'x402: unsupported network format "{network}" (expected "eip155:<chainId>")')
     try:
         return int(parts[1])
     except ValueError:
@@ -161,9 +159,7 @@ def extract_x402_metadata(
 
     recipient_label = None
     if selected_option.pay_to:
-        recipient_label = (
-            f"{selected_option.pay_to[:6]}...{selected_option.pay_to[-4:]}"
-        )
+        recipient_label = f"{selected_option.pay_to[:6]}...{selected_option.pay_to[-4:]}"
 
     return {
         "resource_url": parsed.resource.url,

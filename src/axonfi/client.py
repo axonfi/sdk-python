@@ -12,11 +12,12 @@ from eth_account import Account
 from web3 import Web3
 
 from .amounts import parse_amount
-from .constants import DEFAULT_DEADLINE_SECONDS, RELAYER_URL, RelayerAPI
+from .constants import DEFAULT_DEADLINE_SECONDS, RELAYER_URL, USDC, RelayerAPI
+from .eip3009 import USDC_EIP712_DOMAIN, random_nonce, sign_transfer_with_authorization
+from .permit2 import X402_PROXY_ADDRESS, random_permit2_nonce, sign_permit2_witness_transfer
 from .signer import encode_ref, sign_execute_intent, sign_payment, sign_swap_intent
 from .tokens import resolve_token
 from .types import (
-    AxonClientConfig,
     DestinationCheckResult,
     ExecuteInput,
     ExecuteIntent,
@@ -31,14 +32,11 @@ from .types import (
 )
 from .x402 import (
     X402HandleResult,
-    X402PaymentOption,
     extract_x402_metadata,
     find_matching_option,
     format_payment_signature,
     parse_payment_required,
 )
-from .eip3009 import USDC_EIP712_DOMAIN, random_nonce, sign_transfer_with_authorization
-from .permit2 import X402_PROXY_ADDRESS, random_permit2_nonce, sign_permit2_witness_transfer
 
 
 class AxonClient:
@@ -129,9 +127,7 @@ class AxonClient:
             x402_funding=x402_funding,
         )
         intent = self._build_payment_intent(inp)
-        signature = sign_payment(
-            self._private_key, self.vault_address, self.chain_id, intent
-        )
+        signature = sign_payment(self._private_key, self.vault_address, self.chain_id, intent)
         return await self._submit_payment(intent, signature, inp)
 
     # ========================================================================
@@ -170,9 +166,7 @@ class AxonClient:
             max_from_amount=max_from_amount,
         )
         intent = self._build_execute_intent(inp)
-        signature = sign_execute_intent(
-            self._private_key, self.vault_address, self.chain_id, intent
-        )
+        signature = sign_execute_intent(self._private_key, self.vault_address, self.chain_id, intent)
         return await self._submit_execute(intent, signature, inp)
 
     # ========================================================================
@@ -203,9 +197,7 @@ class AxonClient:
             max_from_amount=max_from_amount,
         )
         intent = self._build_swap_intent(inp)
-        signature = sign_swap_intent(
-            self._private_key, self.vault_address, self.chain_id, intent
-        )
+        signature = sign_swap_intent(self._private_key, self.vault_address, self.chain_id, intent)
         return await self._submit_swap(intent, signature, inp)
 
     # ========================================================================
@@ -272,9 +264,7 @@ class AxonClient:
         option = find_matching_option(parsed.accepts, self.chain_id)
         if not option:
             networks = ", ".join(a.network for a in parsed.accepts)
-            raise ValueError(
-                f"x402: no payment option matches chain {self.chain_id}. Available: {networks}"
-            )
+            raise ValueError(f"x402: no payment option matches chain {self.chain_id}. Available: {networks}")
 
         # 3. Extract metadata
         x402_meta = extract_x402_metadata(parsed, option)
@@ -303,14 +293,10 @@ class AxonClient:
                 await asyncio.sleep(poll_interval_ms / 1000)
                 funding_result = await self.poll(funding_result.request_id)
             if funding_result.status == "pending_review":
-                raise RuntimeError(
-                    f"x402: funding timed out after {max_timeout_ms}ms (still pending_review)"
-                )
+                raise RuntimeError(f"x402: funding timed out after {max_timeout_ms}ms (still pending_review)")
 
         if funding_result.status == "rejected":
-            raise RuntimeError(
-                f"x402: funding rejected — {funding_result.reason or 'unknown reason'}"
-            )
+            raise RuntimeError(f"x402: funding rejected — {funding_result.reason or 'unknown reason'}")
 
         # 6. Sign appropriate authorization
         pay_to = option.pay_to
@@ -418,9 +404,7 @@ class AxonClient:
 
     async def is_active(self) -> bool:
         """Whether this bot is registered and active in the vault."""
-        path = RelayerAPI.bot_status(
-            self.vault_address, self.bot_address, self.chain_id
-        )
+        path = RelayerAPI.bot_status(self.vault_address, self.bot_address, self.chain_id)
         data = await self._get(path)
         return data["isActive"]
 
@@ -443,13 +427,9 @@ class AxonClient:
 
     async def can_pay_to(self, destination: str) -> DestinationCheckResult:
         """Check whether this bot can pay to a given destination."""
-        path = RelayerAPI.destination_check(
-            self.vault_address, self.bot_address, destination, self.chain_id
-        )
+        path = RelayerAPI.destination_check(self.vault_address, self.bot_address, destination, self.chain_id)
         data = await self._get(path)
-        return DestinationCheckResult(
-            allowed=data["allowed"], reason=data.get("reason")
-        )
+        return DestinationCheckResult(allowed=data["allowed"], reason=data.get("reason"))
 
     async def is_protocol_approved(self, protocol: str) -> bool:
         """Whether a protocol is approved for executeProtocol() calls."""
@@ -500,9 +480,7 @@ class AxonClient:
         client = await self._client()
         resp = await client.get(path)
         if resp.status_code >= 400:
-            raise RuntimeError(
-                f"Relayer request failed [{resp.status_code}]: {resp.text}"
-            )
+            raise RuntimeError(f"Relayer request failed [{resp.status_code}]: {resp.text}")
         return resp.json()
 
     async def _post(self, path: str, idempotency_key: str, body: dict) -> PaymentResult:
@@ -513,9 +491,7 @@ class AxonClient:
             headers={"Idempotency-Key": idempotency_key},
         )
         if resp.status_code >= 400:
-            raise RuntimeError(
-                f"Relayer request failed [{resp.status_code}]: {resp.text}"
-            )
+            raise RuntimeError(f"Relayer request failed [{resp.status_code}]: {resp.text}")
         return self._parse_result(resp.json())
 
     def _default_deadline(self) -> int:
@@ -560,9 +536,7 @@ class AxonClient:
             ref=self._resolve_ref(inp.memo, inp.ref),
         )
 
-    async def _submit_payment(
-        self, intent: PaymentIntent, signature: str, inp: PayInput
-    ) -> PaymentResult:
+    async def _submit_payment(self, intent: PaymentIntent, signature: str, inp: PayInput) -> PaymentResult:
         idem = inp.idempotency_key or str(uuid.uuid4())
         body: dict[str, Any] = {
             "chainId": self.chain_id,
@@ -592,17 +566,11 @@ class AxonClient:
             body["x402Funding"] = inp.x402_funding
         return await self._post(RelayerAPI.PAYMENTS, idem, body)
 
-    async def _submit_execute(
-        self, intent: ExecuteIntent, signature: str, inp: ExecuteInput
-    ) -> PaymentResult:
+    async def _submit_execute(self, intent: ExecuteIntent, signature: str, inp: ExecuteInput) -> PaymentResult:
         idem = inp.idempotency_key or str(uuid.uuid4())
-        from_token = (
-            resolve_token(inp.from_token, self.chain_id) if inp.from_token else None
-        )
+        from_token = resolve_token(inp.from_token, self.chain_id) if inp.from_token else None
         max_from_amount = (
-            parse_amount(inp.max_from_amount, inp.from_token or inp.token)
-            if inp.max_from_amount is not None
-            else None
+            parse_amount(inp.max_from_amount, inp.from_token or inp.token) if inp.max_from_amount is not None else None
         )
 
         body: dict[str, Any] = {
@@ -631,13 +599,9 @@ class AxonClient:
             body["metadata"] = inp.metadata
         return await self._post(RelayerAPI.EXECUTE, idem, body)
 
-    async def _submit_swap(
-        self, intent: SwapIntent, signature: str, inp: SwapInput
-    ) -> PaymentResult:
+    async def _submit_swap(self, intent: SwapIntent, signature: str, inp: SwapInput) -> PaymentResult:
         idem = inp.idempotency_key or str(uuid.uuid4())
-        from_token = (
-            resolve_token(inp.from_token, self.chain_id) if inp.from_token else None
-        )
+        from_token = resolve_token(inp.from_token, self.chain_id) if inp.from_token else None
         max_from_amount = (
             parse_amount(inp.max_from_amount, inp.from_token or inp.to_token)
             if inp.max_from_amount is not None
@@ -727,12 +691,8 @@ class AxonClientSync:
         else:
             return asyncio.run(coro)
 
-    def pay(
-        self, to: str, token: str, amount: int | float | str, **kwargs
-    ) -> PaymentResult:
-        return self._run(
-            self._async_client.pay(to=to, token=token, amount=amount, **kwargs)
-        )
+    def pay(self, to: str, token: str, amount: int | float | str, **kwargs) -> PaymentResult:
+        return self._run(self._async_client.pay(to=to, token=token, amount=amount, **kwargs))
 
     def execute(
         self,
@@ -752,14 +712,8 @@ class AxonClientSync:
             )
         )
 
-    def swap(
-        self, to_token: str, min_to_amount: int | float | str, **kwargs
-    ) -> PaymentResult:
-        return self._run(
-            self._async_client.swap(
-                to_token=to_token, min_to_amount=min_to_amount, **kwargs
-            )
-        )
+    def swap(self, to_token: str, min_to_amount: int | float | str, **kwargs) -> PaymentResult:
+        return self._run(self._async_client.swap(to_token=to_token, min_to_amount=min_to_amount, **kwargs))
 
     def get_balance(self, token: str) -> int:
         return self._run(self._async_client.get_balance(token))
@@ -794,13 +748,8 @@ class AxonClientSync:
         max_timeout_ms: int = 120_000,
         poll_interval_ms: int = 5_000,
     ):
-        from .x402 import X402HandleResult
 
-        return self._run(
-            self._async_client.x402_handle_payment_required(
-                headers, max_timeout_ms, poll_interval_ms
-            )
-        )
+        return self._run(self._async_client.x402_handle_payment_required(headers, max_timeout_ms, poll_interval_ms))
 
     def poll(self, request_id: str) -> PaymentResult:
         return self._run(self._async_client.poll(request_id))

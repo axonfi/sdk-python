@@ -1,23 +1,32 @@
 """Chain enums, USDC addresses, EIP-712 constants, error codes, and relayer API paths."""
 
 from enum import IntEnum
+
 from web3 import Web3
 
 # ============================================================================
 # EIP-712 type hashes
 # ============================================================================
 
-PAYMENT_INTENT_TYPEHASH: str = "0x" + Web3.keccak(
-    text="PaymentIntent(address bot,address to,address token,uint256 amount,uint256 deadline,bytes32 ref)"
-).hex()
+PAYMENT_INTENT_TYPEHASH: str = (
+    "0x"
+    + Web3.keccak(
+        text="PaymentIntent(address bot,address to,address token,uint256 amount,uint256 deadline,bytes32 ref)"
+    ).hex()
+)
 
-EXECUTE_INTENT_TYPEHASH: str = "0x" + Web3.keccak(
-    text="ExecuteIntent(address bot,address protocol,bytes32 calldataHash,address token,uint256 amount,uint256 deadline,bytes32 ref)"
-).hex()
+EXECUTE_INTENT_TYPEHASH: str = (
+    "0x"
+    + Web3.keccak(
+        text="ExecuteIntent(address bot,address protocol,bytes32 calldataHash,"
+        "address token,uint256 amount,uint256 deadline,bytes32 ref)"
+    ).hex()
+)
 
-SWAP_INTENT_TYPEHASH: str = "0x" + Web3.keccak(
-    text="SwapIntent(address bot,address toToken,uint256 minToAmount,uint256 deadline,bytes32 ref)"
-).hex()
+SWAP_INTENT_TYPEHASH: str = (
+    "0x"
+    + Web3.keccak(text="SwapIntent(address bot,address toToken,uint256 minToAmount,uint256 deadline,bytes32 ref)").hex()
+)
 
 EIP712_DOMAIN_NAME = "AxonVault"
 EIP712_DOMAIN_VERSION = "1"
@@ -33,10 +42,10 @@ NATIVE_ETH: str = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
 # ============================================================================
 
 USDC: dict[int, str] = {
-    8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",       # Base mainnet
-    84532: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",      # Base Sepolia
-    42161: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",      # Arbitrum One
-    421614: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",     # Arbitrum Sepolia
+    8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",  # Base mainnet
+    84532: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",  # Base Sepolia
+    42161: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",  # Arbitrum One
+    421614: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",  # Arbitrum Sepolia
 }
 
 # ============================================================================
