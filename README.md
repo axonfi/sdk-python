@@ -4,6 +4,18 @@ Python SDK for [Axon](https://axonfi.xyz) — treasury and payment infrastructur
 
 Axon lets bot operators deploy non-custodial vaults, register bot public keys, define spending policies, and let their bots make gasless payments — without bots ever touching private keys or gas.
 
+## Features
+
+- **Payments** — Send USDC or any ERC-20 to any address. Gasless for bots (EIP-712 intents, relayer pays gas). Per-tx caps, daily limits, AI verification.
+- **DeFi Protocol Execution** — Interact with Uniswap, Aave, GMX, Ostium, Lido, and any on-chain protocol from your vault. Atomic approve/call/revoke.
+- **In-Vault Swaps** — Rebalance tokens inside the vault without withdrawing. Separate caps from payment limits.
+- **HTTP 402 Paywalls (x402)** — Native support for [x402](https://www.x402.org/) APIs. One-call `x402_handle_payment_required()` handles parsing, vault funding, signing, and retry headers. EIP-3009 (USDC) and Permit2 (any ERC-20).
+- **AI Verification** — 3-agent LLM consensus (safety, behavioral, reasoning) for flagged transactions. Configurable per bot: threshold-based or always-on.
+- **Non-Custodial Vaults** — Each owner deploys their own vault. Only the owner can withdraw. Enforced on-chain.
+- **Async + Sync** — `AxonClient` (async) or `AxonClientSync` (LangChain, CrewAI, scripts).
+- **Human-Friendly Amounts** — Pass `5` or `"5.2"` instead of `5000000`. SDK handles decimals. Token resolution by symbol, enum, or address.
+- **Multi-Chain** — Base, Arbitrum. USDC as base asset. Same SDK, same API.
+
 ## Installation
 
 ```bash
@@ -31,7 +43,7 @@ from eth_account import Account
 from web3 import Web3
 from axonfi import (
     deploy_vault, add_bot, deposit, BotConfigInput, SpendingLimitInput,
-    Chain, NATIVE_ETH, USDC, WINDOW_ONE_DAY,
+    Chain, WINDOW_ONE_DAY,
 )
 
 # ── 1. Owner wallet (funded with ETH for gas) ─────────────────────
@@ -63,10 +75,10 @@ add_bot(w3, owner, vault_address, bot_address, BotConfigInput(
 
 # ── 5. Deposit funds (on-chain tx, ~0.0005 ETH gas) ───────────────
 # Option A: Deposit ETH (vault accepts native ETH directly)
-deposit(w3, owner, vault_address, NATIVE_ETH, Web3.to_wei(0.1, "ether"))
+deposit(w3, owner, vault_address, "ETH", Web3.to_wei(0.1, "ether"))
 
 # Option B: Deposit USDC (SDK handles approve + deposit)
-deposit(w3, owner, vault_address, USDC[chain_id], 500_000_000)  # 500 USDC
+deposit(w3, owner, vault_address, "USDC", 500_000_000)  # 500 USDC
 
 # ── 6. Bot is ready — gasless from here ────────────────────────────
 # Save bot_key securely. The bot never needs ETH.
@@ -154,14 +166,6 @@ client = AxonClientSync(
 
 result = client.pay(to="0x...", token=Token.USDC, amount=5)
 ```
-
-## Features
-
-- **EIP-712 signing** for all intent types (payment, execute, swap)
-- **Async + sync** clients — use `AxonClient` (async) or `AxonClientSync`
-- **Human-friendly amounts** — pass `5` or `"5.2"` instead of `5000000`
-- **Token registry** — use `"USDC"` or `Token.USDC` instead of addresses
-- **Full relayer API** — pay, execute DeFi protocols, swap, poll, check balances
 
 ## API Reference
 
