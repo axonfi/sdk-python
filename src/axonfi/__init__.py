@@ -32,6 +32,28 @@ from .tokens import (
     resolve_token,
 )
 from .amounts import parse_amount, resolve_token_decimals
+from .eip3009 import (
+    USDC_EIP712_DOMAIN,
+    random_nonce,
+    sign_transfer_with_authorization,
+)
+from .permit2 import (
+    PERMIT2_ADDRESS,
+    X402_PROXY_ADDRESS,
+    random_permit2_nonce,
+    sign_permit2_witness_transfer,
+)
+from .x402 import (
+    X402HandleResult,
+    X402PaymentOption,
+    X402PaymentRequired,
+    X402Resource,
+    extract_x402_metadata,
+    find_matching_option,
+    format_payment_signature,
+    parse_chain_id,
+    parse_payment_required,
+)
 from .types import (
     AxonClientConfig,
     DestinationCheckResult,
@@ -103,4 +125,23 @@ __all__ = [
     "DestinationCheckResult",
     "RebalanceTokensResult",
     "TosStatus",
+    # EIP-3009
+    "sign_transfer_with_authorization",
+    "random_nonce",
+    "USDC_EIP712_DOMAIN",
+    # Permit2
+    "sign_permit2_witness_transfer",
+    "random_permit2_nonce",
+    "PERMIT2_ADDRESS",
+    "X402_PROXY_ADDRESS",
+    # x402
+    "parse_payment_required",
+    "parse_chain_id",
+    "find_matching_option",
+    "extract_x402_metadata",
+    "format_payment_signature",
+    "X402Resource",
+    "X402PaymentOption",
+    "X402PaymentRequired",
+    "X402HandleResult",
 ]

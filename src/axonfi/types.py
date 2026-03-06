@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-
 # ============================================================================
 # On-chain structs (mirror Solidity exactly)
 # ============================================================================
@@ -14,6 +13,7 @@ from typing import Literal
 @dataclass(frozen=True)
 class PaymentIntent:
     """Signed payment intent — the core signed data unit."""
+
     bot: str
     to: str
     token: str
@@ -25,6 +25,7 @@ class PaymentIntent:
 @dataclass(frozen=True)
 class ExecuteIntent:
     """Signed execute intent for DeFi protocol interactions."""
+
     bot: str
     protocol: str
     calldata_hash: str  # bytes32 hex
@@ -37,6 +38,7 @@ class ExecuteIntent:
 @dataclass(frozen=True)
 class SwapIntent:
     """Signed swap intent for in-vault token rebalancing."""
+
     bot: str
     to_token: str
     min_to_amount: int
@@ -52,6 +54,7 @@ class SwapIntent:
 @dataclass
 class PayInput:
     """Input for AxonClient.pay()."""
+
     to: str
     token: str  # Address, Token enum, or bare symbol ('USDC')
     amount: int | float | str  # raw base units, human number, or human string
@@ -65,11 +68,13 @@ class PayInput:
     metadata: dict[str, str] | None = None
     deadline: int | None = None
     ref: str | None = None  # Override ref bytes32 directly
+    x402_funding: bool | None = None  # x402 bot-EOA funding flag
 
 
 @dataclass
 class ExecuteInput:
     """Input for AxonClient.execute()."""
+
     protocol: str
     call_data: str  # hex bytes
     token: str
@@ -90,6 +95,7 @@ class ExecuteInput:
 @dataclass
 class SwapInput:
     """Input for AxonClient.swap()."""
+
     to_token: str
     min_to_amount: int | float | str
 
@@ -113,6 +119,7 @@ PaymentStatus = Literal["approved", "pending_review", "rejected"]
 @dataclass
 class PaymentResult:
     """Result of pay(), execute(), swap(), or poll()."""
+
     request_id: str
     status: PaymentStatus
     tx_hash: str | None = None
@@ -124,6 +131,7 @@ class PaymentResult:
 @dataclass
 class VaultInfo:
     """High-level vault info."""
+
     owner: str
     operator: str
     paused: bool
@@ -133,6 +141,7 @@ class VaultInfo:
 @dataclass
 class DestinationCheckResult:
     """Result of a destination check."""
+
     allowed: bool
     reason: str | None = None
 
@@ -140,6 +149,7 @@ class DestinationCheckResult:
 @dataclass
 class RebalanceTokensResult:
     """Effective rebalance token whitelist."""
+
     source: Literal["default", "on_chain"]
     tokens: list[str]
     rebalance_token_count: int
@@ -148,6 +158,7 @@ class RebalanceTokensResult:
 @dataclass
 class TosStatus:
     """TOS acceptance status."""
+
     accepted: bool
     tos_version: str
 
@@ -155,6 +166,7 @@ class TosStatus:
 @dataclass
 class AxonClientConfig:
     """Configuration for AxonClient."""
+
     vault_address: str
     chain_id: int
     bot_private_key: str  # hex, 0x-prefixed

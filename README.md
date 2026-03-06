@@ -138,6 +138,53 @@ usdc_addr = USDC[chain_id]        # 0x036CbD...
 decimals = KNOWN_TOKENS["USDC"].decimals  # 6
 ```
 
+## HTTP 402 Paywalls (x402)
+
+The SDK includes utilities for handling [x402](https://www.x402.org/) paywalls — APIs that charge per-request via HTTP 402 Payment Required.
+
+```python
+import httpx
+from axonfi import (
+    parse_payment_required,
+    find_matching_option,
+    extract_x402_metadata,
+    format_payment_signature,
+)
+
+response = await httpx.AsyncClient().get("https://api.example.com/data")
+
+if response.status_code == 402:
+    # 1. Parse the PAYMENT-REQUIRED header
+    header = response.headers["payment-required"]
+    parsed = parse_payment_required(header)
+
+    # 2. Find a payment option matching your chain
+    option = find_matching_option(parsed.accepts, client.chain_id)
+
+    # 3. Fund the bot from the vault
+    result = await client.pay(
+        to=client.bot_address,
+        token=option.asset,
+        amount=int(option.amount),
+        x402_funding=True,
+    )
+
+    # 4. Sign the authorization and retry
+    signature_header = format_payment_signature({
+        "scheme": "exact",
+        "signature": "...",  # EIP-3009 or Permit2 sig
+    })
+
+    data = await httpx.AsyncClient().get(
+        "https://api.example.com/data",
+        headers={"PAYMENT-SIGNATURE": signature_header},
+    )
+```
+
+The full pipeline applies — spending limits, AI verification, human review — even for 402 payments. Vault owners see every paywall payment in the dashboard with the resource URL, merchant address, and amount.
+
+Supports EIP-3009 (USDC, gasless) and Permit2 (any ERC-20) settlement schemes.
+
 ## Supported Chains
 
 | Chain | ID | Status |
