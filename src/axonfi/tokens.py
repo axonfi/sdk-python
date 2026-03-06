@@ -1,4 +1,4 @@
-"""Token registry — single source of truth for known tokens across all chains."""
+"""Token registry — auto-generated from packages/sdk-ts/src/tokens.ts. Do not edit manually."""
 
 from __future__ import annotations
 
@@ -39,25 +39,25 @@ class KnownToken:
 KNOWN_TOKENS: dict[str, KnownToken] = {
     "USDC": KnownToken("USDC", "USD Coin", 6, {
         8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-        84532: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
         42161: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        84532: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
         421614: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
     }),
     "USDT": KnownToken("USDT", "Tether USD", 6, {
         8453: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
-        84532: "0x323e78f944A9a1FcF3a10efcC5319DBb0bB6e673",
         42161: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+        84532: "0x323e78f944A9a1FcF3a10efcC5319DBb0bB6e673",
     }),
     "DAI": KnownToken("DAI", "Dai Stablecoin", 18, {
         8453: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
-        84532: "0x819ffecd4e64f193e959944bcd57eedc7755e17a",
         42161: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
+        84532: "0x819ffecd4e64f193e959944bcd57eedc7755e17a",
     }),
     "WETH": KnownToken("WETH", "Wrapped Ether", 18, {
         8453: "0x4200000000000000000000000000000000000006",
-        84532: "0x4200000000000000000000000000000000000006",
         42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-        421614: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        84532: "0x4200000000000000000000000000000000000006",
+        421614: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73",
     }),
     "WBTC": KnownToken("WBTC", "Wrapped BTC", 8, {
         8453: "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c",
@@ -80,8 +80,8 @@ KNOWN_TOKENS: dict[str, KnownToken] = {
     }),
     "LINK": KnownToken("LINK", "Chainlink", 18, {
         8453: "0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196",
-        84532: "0xE4aB69C077896252FAFBD49EFD26B5D171A32410",
         42161: "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4",
+        84532: "0xE4aB69C077896252FAFBD49EFD26B5D171A32410",
     }),
     "UNI": KnownToken("UNI", "Uniswap", 18, {
         8453: "0xc3De830EA07524a0761646a6a4e4be0e114a3C83",
@@ -112,6 +112,22 @@ KNOWN_TOKENS: dict[str, KnownToken] = {
         42161: "0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a",
     }),
 }
+
+# Tokens pre-approved globally via AxonRegistry as default tokens.
+DEFAULT_APPROVED_TOKENS: list[str] = ["USDC", "USDT", "DAI", "WETH", "WBTC", "cbBTC"]
+
+
+def get_default_approved_tokens(chain_id: int) -> list[str]:
+    """Get default approved token addresses for a specific chain."""
+    result = []
+    for symbol in DEFAULT_APPROVED_TOKENS:
+        entry = KNOWN_TOKENS.get(symbol)
+        if entry:
+            addr = entry.addresses.get(chain_id)
+            if addr:
+                result.append(addr)
+    return result
+
 
 # Pre-built reverse lookup: lowercase address → symbol
 _address_to_symbol: dict[str, str] = {}

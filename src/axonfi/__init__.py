@@ -25,8 +25,10 @@ from .constants import (
 )
 from .signer import encode_ref, sign_execute_intent, sign_payment, sign_swap_intent
 from .tokens import (
+    DEFAULT_APPROVED_TOKENS,
     KNOWN_TOKENS,
     Token,
+    get_default_approved_tokens,
     get_known_tokens_for_chain,
     get_token_symbol_by_address,
     resolve_token,
