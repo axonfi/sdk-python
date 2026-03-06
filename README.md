@@ -108,7 +108,7 @@ result = client.pay(to="0x...", token=Token.USDC, amount=5)
 | Method | Description |
 |--------|-------------|
 | `pay(to, token, amount, ...)` | Create, sign, and submit a payment |
-| `execute(protocol, call_data, token, amount, ...)` | DeFi protocol interaction |
+| `execute(protocol, call_data, token, amount, ...)` | DeFi protocol interaction (see [below](#defi-protocol-execution)) |
 | `swap(to_token, min_to_amount, ...)` | In-vault token swap |
 | `get_balance(token)` | Vault balance for a token |
 | `get_balances(tokens)` | Multiple balances in one call |
@@ -137,6 +137,82 @@ chain_id = Chain.BaseSepolia       # 84532
 usdc_addr = USDC[chain_id]        # 0x036CbD...
 decimals = KNOWN_TOKENS["USDC"].decimals  # 6
 ```
+
+## DeFi Protocol Execution
+
+Use `execute()` to interact with DeFi protocols (Uniswap, Aave, GMX, Ostium, etc.) from your vault. The relayer handles token approvals, execution, and revocation atomically.
+
+```python
+result = await client.execute(
+    protocol="0xUniswapRouter",
+    call_data="0x...",
+    token=Token.USDC,
+    amount=100,
+)
+```
+
+### When the approval target differs from the call target
+
+In simple cases (Uniswap, Aave), the contract you call is the same contract that pulls your tokens — `execute()` handles this automatically in a single call.
+
+But many DeFi protocols split these into two contracts:
+
+- **Call target** (`protocol`) — the contract you send the transaction to (e.g., Ostium's `Trading` for `openTrade()`)
+- **Approval target** — the contract that actually calls `transferFrom()` to pull tokens from your vault (e.g., Ostium's `TradingStorage`)
+
+When these differ, you need a **two-step pattern**: first give the approval target a persistent token allowance, then call the action.
+
+**Example — Ostium perpetual futures:**
+
+Ostium's `openTrade()` lives on the Trading contract, but collateral gets pulled by TradingStorage. The vault must approve TradingStorage, not Trading.
+
+```python
+USDC = "0x..."                      # USDC on your chain
+OSTIUM_TRADING = "0x..."            # calls openTrade()
+OSTIUM_TRADING_STORAGE = "0x..."    # pulls USDC via transferFrom()
+
+# Step 1: Persistent approval (one-time) — call approve() on the token contract
+# This tells USDC to let TradingStorage spend from the vault.
+result = await client.execute(
+    protocol=USDC,                         # call target: the token contract itself
+    call_data=encode_approve(OSTIUM_TRADING_STORAGE, MAX_UINT256),
+    token=USDC,
+    amount=0,                              # no token spend, just setting an allowance
+    protocol_name="USDC Approve",
+)
+
+# Step 2: Open trade — call the action contract
+result = await client.execute(
+    protocol=OSTIUM_TRADING,               # call target: the Trading contract
+    call_data=encode_open_trade(...),
+    token=USDC,
+    amount=50_000_000,                     # 50 USDC — passed for dashboard/AI visibility
+    protocol_name="Ostium",
+)
+```
+
+**Vault setup (owner, one-time):** Two contracts must be approved via `approveProtocol()`:
+1. **USDC** (the token contract) — because the vault calls `approve()` on it directly
+2. **Trading** — because the vault calls `openTrade()` on it
+
+TradingStorage does *not* need to be approved — it's just an argument to `approve()`, not a contract the vault calls.
+
+> **Note:** Common tokens (USDC, USDT, WETH, etc.) are pre-approved globally via the Axon registry as default tokens, so you typically only need to approve the DeFi protocol contract itself. You only need to approve a token if it's uncommon and not in the registry defaults.
+
+> **Testnet note:** If the protocol uses a custom token that isn't on Uniswap (e.g., Ostium's testnet USDC), set the bot's `maxPerTxAmount` to `0` to skip TWAP oracle pricing.
+
+This pattern applies to any protocol where the approval target differs from the call target (GMX, some lending protocols, etc.). See the [Ostium perps trader example](https://github.com/axonfi/examples/tree/main/python/ostium-perps-trader) for a complete working implementation.
+
+### `ContractNotApproved` error
+
+If `execute()` reverts with `ContractNotApproved`, the `protocol` address you're calling isn't approved. Two possible causes:
+
+1. **The DeFi protocol contract isn't approved** — the vault owner must call `approveProtocol(address)` on the vault for the protocol contract (e.g., Uniswap Router, Ostium Trading, Lido stETH).
+2. **The token contract isn't approved** — when doing a token approval (Step 1 above), the token must either be approved on the vault via `approveProtocol(tokenAddress)` or be a registry default token. Common tokens (USDC, USDT, WETH, DAI, etc.) are pre-approved globally by Axon, but uncommon tokens (e.g., stETH, aUSDC, cTokens) may need manual approval.
+
+**Example — Lido staking/unstaking:** To unstake stETH, Lido's withdrawal contract calls `transferFrom()` to pull stETH from your vault. You need:
+- `approveProtocol(stETH)` — so the vault can call `approve()` on the stETH token to grant Lido an allowance
+- `approveProtocol(lidoWithdrawalQueue)` — so the vault can call `requestWithdrawals()` on Lido
 
 ## HTTP 402 Paywalls (x402)
 
