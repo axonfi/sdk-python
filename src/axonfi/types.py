@@ -31,6 +31,7 @@ class ExecuteIntent:
     calldata_hash: str  # bytes32 hex
     token: str
     amount: int
+    value: int  # native ETH to send (wei), 0 = no ETH
     deadline: int
     ref: str
 
@@ -79,6 +80,8 @@ class ExecuteInput:
     call_data: str  # hex bytes
     token: str
     amount: int | float | str
+
+    value: int | None = None  # native ETH to send (wei), 0 or None = no ETH
 
     memo: str | None = None
     protocol_name: str | None = None

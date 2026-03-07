@@ -28,6 +28,7 @@ _EXECUTE_INTENT_TYPES = {
         {"name": "calldataHash", "type": "bytes32"},
         {"name": "token", "type": "address"},
         {"name": "amount", "type": "uint256"},
+        {"name": "value", "type": "uint256"},
         {"name": "deadline", "type": "uint256"},
         {"name": "ref", "type": "bytes32"},
     ],
@@ -105,6 +106,7 @@ def sign_execute_intent(
         "calldataHash": _to_bytes32(intent.calldata_hash),
         "token": intent.token,
         "amount": intent.amount,
+        "value": intent.value,
         "deadline": intent.deadline,
         "ref": _to_bytes32(intent.ref),
     }

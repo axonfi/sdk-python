@@ -536,6 +536,7 @@ class AxonClient:
             calldata_hash="0x" + Web3.keccak(hexstr=inp.call_data).hex(),
             token=resolve_token(inp.token, self.chain_id),
             amount=parse_amount(inp.amount, inp.token),
+            value=inp.value or 0,
             deadline=inp.deadline or self._default_deadline(),
             ref=self._resolve_ref(inp.memo, inp.ref),
         )
@@ -594,6 +595,7 @@ class AxonClient:
             "calldataHash": intent.calldata_hash,
             "token": intent.token,
             "amount": str(intent.amount),
+            "value": str(intent.value),
             "deadline": str(intent.deadline),
             "ref": intent.ref,
             "signature": signature,
