@@ -23,8 +23,6 @@ class Token(str, Enum):
     COMP = "COMP"
     CRV = "CRV"
     SNX = "SNX"
-    ARB = "ARB"
-    AERO = "AERO"
     GMX = "GMX"
 
 
@@ -186,22 +184,6 @@ KNOWN_TOKENS: dict[str, KnownToken] = {
         18,
         {
             8453: "0x22e6966B799c4D5B13BE962E1D117b56327FDa66",
-        },
-    ),
-    "ARB": KnownToken(
-        "ARB",
-        "Arbitrum",
-        18,
-        {
-            42161: "0x912CE59144191C1204E64559FE8253a0e49E6548",
-        },
-    ),
-    "AERO": KnownToken(
-        "AERO",
-        "Aerodrome",
-        18,
-        {
-            8453: "0x940181a94A35A4569E4529A3CDfB74e38FD98631",
         },
     ),
     "GMX": KnownToken(
