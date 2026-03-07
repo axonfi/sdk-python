@@ -504,9 +504,21 @@ class AxonClient:
             return encode_ref(memo)
         return "0x" + "00" * 32
 
+    @staticmethod
+    def _reject_burn_address(address: str, label: str) -> None:
+        _BURN_ADDRESSES = {
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000001",
+            "0x000000000000000000000000000000000000dead",
+            "0xdead000000000000000000000000000000000000",
+            "0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000",
+            "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        }
+        if address.lower() in _BURN_ADDRESSES:
+            raise ValueError(f"{label} cannot be a burn/dead address ({address})")
+
     def _build_payment_intent(self, inp: PayInput) -> PaymentIntent:
-        if inp.to == "0x0000000000000000000000000000000000000000":
-            raise ValueError("Payment recipient cannot be the zero address")
+        self._reject_burn_address(inp.to, "Payment recipient")
         return PaymentIntent(
             bot=self.bot_address,
             to=inp.to,
@@ -517,6 +529,7 @@ class AxonClient:
         )
 
     def _build_execute_intent(self, inp: ExecuteInput) -> ExecuteIntent:
+        self._reject_burn_address(inp.protocol, "Protocol address")
         return ExecuteIntent(
             bot=self.bot_address,
             protocol=inp.protocol,
