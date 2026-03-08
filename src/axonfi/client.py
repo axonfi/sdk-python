@@ -138,12 +138,10 @@ class AxonClient:
         self,
         protocol: str,
         call_data: str,
-        token: str,
-        amount: int | float | str,
         *,
+        tokens: list[str] | None = None,
+        amounts: list[int | float | str] | None = None,
         value: int | None = None,
-        extra_tokens: list[str] | None = None,
-        extra_amounts: list[int] | None = None,
         memo: str | None = None,
         protocol_name: str | None = None,
         ref: str | None = None,
@@ -157,11 +155,9 @@ class AxonClient:
         inp = ExecuteInput(
             protocol=protocol,
             call_data=call_data,
-            token=token,
-            amount=amount,
+            tokens=tokens,
+            amounts=amounts,
             value=value,
-            extra_tokens=extra_tokens,
-            extra_amounts=extra_amounts,
             memo=memo,
             protocol_name=protocol_name,
             ref=ref,
@@ -536,15 +532,29 @@ class AxonClient:
 
     def _build_execute_intent(self, inp: ExecuteInput) -> ExecuteIntent:
         self._reject_burn_address(inp.protocol, "Protocol address")
+        input_tokens = inp.tokens or []
+        input_amounts = inp.amounts or []
+        if len(input_tokens) != len(input_amounts):
+            raise ValueError(f"tokens length ({len(input_tokens)}) must match amounts length ({len(input_amounts)})")
+        if len(input_tokens) > 5:
+            raise ValueError(
+                f"Too many tokens ({len(input_tokens)}): maximum 5 allowed. Contact Axon if you need more."
+            )
+        resolved_tokens = tuple(resolve_token(t, self.chain_id) for t in input_tokens)
+        zero = "0x0000000000000000000000000000000000000000"
+        for t in resolved_tokens:
+            if t.lower() == zero:
+                raise ValueError("Zero address not allowed in tokens array")
+        if len(set(t.lower() for t in resolved_tokens)) != len(resolved_tokens):
+            raise ValueError("Duplicate token addresses in tokens array")
+        resolved_amounts = tuple(parse_amount(a, t) for a, t in zip(input_amounts, input_tokens))
         return ExecuteIntent(
             bot=self.bot_address,
             protocol=inp.protocol,
             calldata_hash="0x" + Web3.keccak(hexstr=inp.call_data).hex(),
-            token=resolve_token(inp.token, self.chain_id),
-            amount=parse_amount(inp.amount, inp.token),
+            tokens=resolved_tokens,
+            amounts=resolved_amounts,
             value=inp.value or 0,
-            extra_tokens=tuple(inp.extra_tokens or []),
-            extra_amounts=tuple(inp.extra_amounts or []),
             deadline=inp.deadline or self._default_deadline(),
             ref=self._resolve_ref(inp.memo, inp.ref),
         )
@@ -591,9 +601,7 @@ class AxonClient:
     async def _submit_execute(self, intent: ExecuteIntent, signature: str, inp: ExecuteInput) -> PaymentResult:
         idem = inp.idempotency_key or str(uuid.uuid4())
         from_token = resolve_token(inp.from_token, self.chain_id) if inp.from_token else None
-        max_from_amount = (
-            parse_amount(inp.max_from_amount, inp.from_token or inp.token) if inp.max_from_amount is not None else None
-        )
+        max_from_amount = parse_amount(inp.max_from_amount, inp.from_token) if inp.max_from_amount is not None else None
 
         body: dict[str, Any] = {
             "chainId": self.chain_id,
@@ -601,11 +609,9 @@ class AxonClient:
             "bot": intent.bot,
             "protocol": intent.protocol,
             "calldataHash": intent.calldata_hash,
-            "token": intent.token,
-            "amount": str(intent.amount),
+            "tokens": list(intent.tokens),
+            "amounts": [str(a) for a in intent.amounts],
             "value": str(intent.value),
-            "extraTokens": list(intent.extra_tokens) if intent.extra_tokens else [],
-            "extraAmounts": [str(a) for a in intent.extra_amounts] if intent.extra_amounts else [],
             "deadline": str(intent.deadline),
             "ref": intent.ref,
             "signature": signature,
@@ -723,16 +729,12 @@ class AxonClientSync:
         self,
         protocol: str,
         call_data: str,
-        token: str,
-        amount: int | float | str,
         **kwargs,
     ) -> PaymentResult:
         return self._run(
             self._async_client.execute(
                 protocol=protocol,
                 call_data=call_data,
-                token=token,
-                amount=amount,
                 **kwargs,
             )
         )

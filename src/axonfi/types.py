@@ -29,11 +29,9 @@ class ExecuteIntent:
     bot: str
     protocol: str
     calldata_hash: str  # bytes32 hex
-    token: str
-    amount: int
+    tokens: tuple[str, ...]  # tokens to approve to protocol (e.g. [USDC, WETH])
+    amounts: tuple[int, ...]  # approval amounts for each token
     value: int  # native ETH to send (wei), 0 = no ETH
-    extra_tokens: tuple[str, ...]  # extra token addresses for multi-token approval
-    extra_amounts: tuple[int, ...]  # extra token amounts for multi-token approval
     deadline: int
     ref: str
 
@@ -80,12 +78,11 @@ class ExecuteInput:
 
     protocol: str
     call_data: str  # hex bytes
-    token: str
-    amount: int | float | str
+
+    tokens: list[str] | None = None  # tokens to approve (e.g. ["0x..USDC", "0x..WETH"])
+    amounts: list[int | float | str] | None = None  # amounts for each token
 
     value: int | None = None  # native ETH to send (wei), 0 or None = no ETH
-    extra_tokens: list[str] | None = None  # extra token addresses for multi-token approval
-    extra_amounts: list[int] | None = None  # extra token amounts for multi-token approval
 
     memo: str | None = None
     protocol_name: str | None = None

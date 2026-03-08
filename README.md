@@ -174,7 +174,7 @@ result = client.pay(to="0x...", token=Token.USDC, amount=5)
 | Method | Description |
 |--------|-------------|
 | `pay(to, token, amount, ...)` | Create, sign, and submit a payment |
-| `execute(protocol, call_data, token, amount, ...)` | DeFi protocol interaction (see [below](#defi-protocol-execution)) |
+| `execute(protocol, call_data, tokens, amounts, ...)` | DeFi protocol interaction (see [below](#defi-protocol-execution)) |
 | `swap(to_token, min_to_amount, ...)` | In-vault token swap |
 | `get_balance(token)` | Vault balance for a token |
 | `get_balances(tokens)` | Multiple balances in one call |
@@ -212,8 +212,8 @@ Use `execute()` to interact with DeFi protocols (Uniswap, Aave, GMX, Ostium, etc
 result = await client.execute(
     protocol="0xUniswapRouter",
     call_data="0x...",
-    token=Token.USDC,
-    amount=100,
+    tokens=[Token.USDC],
+    amounts=[100],
 )
 ```
 
@@ -242,8 +242,8 @@ OSTIUM_TRADING_STORAGE = "0x..."    # pulls USDC via transferFrom()
 result = await client.execute(
     protocol=USDC,                         # call target: the token contract itself
     call_data=encode_approve(OSTIUM_TRADING_STORAGE, MAX_UINT256),
-    token=USDC,
-    amount=0,                              # no token spend, just setting an allowance
+    tokens=[USDC],
+    amounts=[0],                           # no token spend, just setting an allowance
     protocol_name="USDC Approve",
 )
 
@@ -251,8 +251,8 @@ result = await client.execute(
 result = await client.execute(
     protocol=OSTIUM_TRADING,               # call target: the Trading contract
     call_data=encode_open_trade(...),
-    token=USDC,
-    amount=50_000_000,                     # 50 USDC — passed for dashboard/AI visibility
+    tokens=[USDC],
+    amounts=[50_000_000],                  # 50 USDC — passed for dashboard/AI visibility
     protocol_name="Ostium",
 )
 ```
