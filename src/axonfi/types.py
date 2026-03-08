@@ -32,6 +32,8 @@ class ExecuteIntent:
     token: str
     amount: int
     value: int  # native ETH to send (wei), 0 = no ETH
+    extra_tokens: tuple[str, ...]  # extra token addresses for multi-token approval
+    extra_amounts: tuple[int, ...]  # extra token amounts for multi-token approval
     deadline: int
     ref: str
 
@@ -82,6 +84,8 @@ class ExecuteInput:
     amount: int | float | str
 
     value: int | None = None  # native ETH to send (wei), 0 or None = no ETH
+    extra_tokens: list[str] | None = None  # extra token addresses for multi-token approval
+    extra_amounts: list[int] | None = None  # extra token amounts for multi-token approval
 
     memo: str | None = None
     protocol_name: str | None = None

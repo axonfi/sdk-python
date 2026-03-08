@@ -19,7 +19,7 @@ EXECUTE_INTENT_TYPEHASH: str = (
     "0x"
     + Web3.keccak(
         text="ExecuteIntent(address bot,address protocol,bytes32 calldataHash,"
-        "address token,uint256 amount,uint256 value,uint256 deadline,bytes32 ref)"
+        "address token,uint256 amount,uint256 value,address[] extraTokens,uint256[] extraAmounts,uint256 deadline,bytes32 ref)"
     ).hex()
 )
 

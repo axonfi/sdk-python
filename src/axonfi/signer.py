@@ -29,6 +29,8 @@ _EXECUTE_INTENT_TYPES = {
         {"name": "token", "type": "address"},
         {"name": "amount", "type": "uint256"},
         {"name": "value", "type": "uint256"},
+        {"name": "extraTokens", "type": "address[]"},
+        {"name": "extraAmounts", "type": "uint256[]"},
         {"name": "deadline", "type": "uint256"},
         {"name": "ref", "type": "bytes32"},
     ],
@@ -107,6 +109,8 @@ def sign_execute_intent(
         "token": intent.token,
         "amount": intent.amount,
         "value": intent.value,
+        "extraTokens": list(intent.extra_tokens),
+        "extraAmounts": list(intent.extra_amounts),
         "deadline": intent.deadline,
         "ref": _to_bytes32(intent.ref),
     }
