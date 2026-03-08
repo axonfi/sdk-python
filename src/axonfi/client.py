@@ -110,7 +110,17 @@ class AxonClient:
         ref: str | None = None,
         x402_funding: bool | None = None,
     ) -> PaymentResult:
-        """Create, sign, and submit a payment intent."""
+        """Create, sign, and submit a payment intent.
+
+        Three possible outcomes (all included in PaymentResult.status):
+        - ``"approved"``: fast path -- tx_hash available immediately
+        - ``"pending_review"``: AI scan or human review in progress -- poll for status
+        - ``"rejected"``: payment was rejected -- reason field explains why
+
+        If the vault doesn't hold enough of the payment token, the relayer returns
+        ``error_code='SWAP_REQUIRED'``. The SDK automatically signs a SwapIntent and
+        resubmits the payment with swap fields -- no action needed from the caller.
+        """
         inp = PayInput(
             to=to,
             token=token,
@@ -128,7 +138,21 @@ class AxonClient:
         )
         intent = self._build_payment_intent(inp)
         signature = sign_payment(self._private_key, self.vault_address, self.chain_id, intent)
-        return await self._submit_payment(intent, signature, inp)
+        result = await self._submit_payment(intent, signature, inp)
+
+        # If vault needs a token swap first, sign a SwapIntent and resubmit
+        if result.status == "rejected" and result.error_code == "SWAP_REQUIRED":
+            swap_intent = SwapIntent(
+                bot=self.bot_address,
+                to_token=intent.token,  # swap TO the payment token
+                min_to_amount=intent.amount,  # need at least the payment amount
+                deadline=intent.deadline,  # same deadline
+                ref=intent.ref,
+            )
+            swap_sig = sign_swap_intent(self._private_key, self.vault_address, self.chain_id, swap_intent)
+            return await self._submit_payment_with_swap(intent, signature, inp, swap_intent, swap_sig)
+
+        return result
 
     # ========================================================================
     # execute()
@@ -148,8 +172,6 @@ class AxonClient:
         idempotency_key: str | None = None,
         deadline: int | None = None,
         metadata: dict[str, str] | None = None,
-        from_token: str | None = None,
-        max_from_amount: int | float | str | None = None,
     ) -> PaymentResult:
         """Sign and submit a DeFi protocol execution."""
         inp = ExecuteInput(
@@ -164,8 +186,6 @@ class AxonClient:
             idempotency_key=idempotency_key,
             deadline=deadline,
             metadata=metadata,
-            from_token=from_token,
-            max_from_amount=max_from_amount,
         )
         intent = self._build_execute_intent(inp)
         signature = sign_execute_intent(self._private_key, self.vault_address, self.chain_id, intent)
@@ -598,10 +618,55 @@ class AxonClient:
             body["x402Funding"] = inp.x402_funding
         return await self._post(RelayerAPI.PAYMENTS, idem, body)
 
+    async def _submit_payment_with_swap(
+        self,
+        intent: PaymentIntent,
+        signature: str,
+        inp: PayInput,
+        swap_intent: SwapIntent,
+        swap_signature: str,
+    ) -> PaymentResult:
+        # New idempotency key for the retry (original was consumed by the SWAP_REQUIRED rejection)
+        idem = str(uuid.uuid4())
+        body: dict[str, Any] = {
+            # Routing
+            "chainId": self.chain_id,
+            "vaultAddress": self.vault_address,
+            # Flat intent fields
+            "bot": intent.bot,
+            "to": intent.to,
+            "token": intent.token,
+            "amount": str(intent.amount),
+            "deadline": str(intent.deadline),
+            "ref": intent.ref,
+            "signature": signature,
+            # Swap fields
+            "swapSignature": swap_signature,
+            "swapToToken": swap_intent.to_token,
+            "swapMinToAmount": str(swap_intent.min_to_amount),
+            "swapDeadline": str(swap_intent.deadline),
+            "swapRef": swap_intent.ref,
+            # Off-chain metadata
+            "idempotencyKey": idem,
+        }
+        if inp.memo is not None:
+            body["memo"] = inp.memo
+        if inp.resource_url is not None:
+            body["resourceUrl"] = inp.resource_url
+        if inp.invoice_id is not None:
+            body["invoiceId"] = inp.invoice_id
+        if inp.order_id is not None:
+            body["orderId"] = inp.order_id
+        if inp.recipient_label is not None:
+            body["recipientLabel"] = inp.recipient_label
+        if inp.metadata is not None:
+            body["metadata"] = inp.metadata
+        if inp.x402_funding is not None:
+            body["x402Funding"] = inp.x402_funding
+        return await self._post(RelayerAPI.PAYMENTS, idem, body)
+
     async def _submit_execute(self, intent: ExecuteIntent, signature: str, inp: ExecuteInput) -> PaymentResult:
         idem = inp.idempotency_key or str(uuid.uuid4())
-        from_token = resolve_token(inp.from_token, self.chain_id) if inp.from_token else None
-        max_from_amount = parse_amount(inp.max_from_amount, inp.from_token) if inp.max_from_amount is not None else None
 
         body: dict[str, Any] = {
             "chainId": self.chain_id,
@@ -618,10 +683,6 @@ class AxonClient:
             "callData": inp.call_data,
             "idempotencyKey": idem,
         }
-        if from_token is not None:
-            body["fromToken"] = from_token
-        if max_from_amount is not None:
-            body["maxFromAmount"] = str(max_from_amount)
         if inp.memo is not None:
             body["memo"] = inp.memo
         if inp.protocol_name is not None:
@@ -667,6 +728,7 @@ class AxonClient:
             poll_url=data.get("pollUrl"),
             estimated_resolution_ms=data.get("estimatedResolutionMs"),
             reason=data.get("reason"),
+            error_code=data.get("errorCode"),
         )
 
 

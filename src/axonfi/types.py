@@ -91,10 +91,6 @@ class ExecuteInput:
     deadline: int | None = None
     metadata: dict[str, str] | None = None
 
-    # Pre-swap fields
-    from_token: str | None = None
-    max_from_amount: int | float | str | None = None
-
 
 @dataclass
 class SwapInput:
@@ -130,6 +126,7 @@ class PaymentResult:
     poll_url: str | None = None
     estimated_resolution_ms: int | None = None
     reason: str | None = None
+    error_code: str | None = None
 
 
 @dataclass
