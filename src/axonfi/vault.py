@@ -11,7 +11,7 @@ from web3.types import TxReceipt
 
 from .abis import AXON_VAULT_ABI, AXON_VAULT_FACTORY_ABI, ERC20_ABI
 from .amounts import parse_amount
-from .constants import NATIVE_ETH, RELAYER_URL
+from .constants import ALLOWED_WINDOWS, NATIVE_ETH, RELAYER_URL
 from .tokens import resolve_token
 
 # ============================================================================
@@ -55,6 +55,12 @@ class BotConfigInput:
 
 def _to_config_params(config: BotConfigInput) -> tuple:
     """Convert BotConfigInput to the on-chain tuple format."""
+    for sl in config.spending_limits:
+        if sl.window_seconds not in ALLOWED_WINDOWS:
+            allowed = ", ".join(f"{w}s" for w in sorted(ALLOWED_WINDOWS))
+            raise ValueError(
+                f"Invalid spending window: {sl.window_seconds}s. Allowed: {allowed}. Use WINDOW constants."
+            )
     return (
         round(config.max_per_tx_amount * USDC_UNIT),
         round(config.max_rebalance_amount * USDC_UNIT),

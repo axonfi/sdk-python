@@ -106,9 +106,21 @@ EXPLORER_ADDR: dict[int, str] = {
 DEFAULT_DEADLINE_SECONDS = 300  # 5 minutes
 
 WINDOW_ONE_HOUR = 3600
+WINDOW_THREE_HOURS = 10800
 WINDOW_ONE_DAY = 86400
 WINDOW_ONE_WEEK = 604800
 WINDOW_THIRTY_DAYS = 2592000
+
+# Only these window values are accepted on-chain. Arbitrary durations revert.
+ALLOWED_WINDOWS: frozenset[int] = frozenset(
+    {
+        WINDOW_ONE_HOUR,
+        WINDOW_THREE_HOURS,
+        WINDOW_ONE_DAY,
+        WINDOW_ONE_WEEK,
+        WINDOW_THIRTY_DAYS,
+    }
+)
 
 # ============================================================================
 # Payment rejection error codes

@@ -3,6 +3,7 @@
 from .amounts import parse_amount, resolve_token_decimals
 from .client import AxonClient, AxonClientSync
 from .constants import (
+    ALLOWED_WINDOWS,
     CHAIN_NAMES,
     DEFAULT_DEADLINE_SECONDS,
     EIP712_DOMAIN_NAME,
@@ -20,6 +21,7 @@ from .constants import (
     WINDOW_ONE_HOUR,
     WINDOW_ONE_WEEK,
     WINDOW_THIRTY_DAYS,
+    WINDOW_THREE_HOURS,
     Chain,
     PaymentErrorCode,
     RelayerAPI,
@@ -97,9 +99,11 @@ __all__ = [
     "SUPPORTED_CHAIN_IDS",
     "DEFAULT_DEADLINE_SECONDS",
     "WINDOW_ONE_HOUR",
+    "WINDOW_THREE_HOURS",
     "WINDOW_ONE_DAY",
     "WINDOW_ONE_WEEK",
     "WINDOW_THIRTY_DAYS",
+    "ALLOWED_WINDOWS",
     "PAYMENT_INTENT_TYPEHASH",
     "EXECUTE_INTENT_TYPEHASH",
     "SWAP_INTENT_TYPEHASH",

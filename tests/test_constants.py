@@ -16,7 +16,9 @@ from axonfi.constants import (
     WINDOW_ONE_DAY,
     WINDOW_ONE_HOUR,
     WINDOW_ONE_WEEK,
+    WINDOW_THREE_HOURS,
     WINDOW_THIRTY_DAYS,
+    ALLOWED_WINDOWS,
     Chain,
     PaymentErrorCode,
 )
@@ -49,9 +51,20 @@ def test_native_eth():
 
 def test_window_constants():
     assert WINDOW_ONE_HOUR == 3600
+    assert WINDOW_THREE_HOURS == 10800
     assert WINDOW_ONE_DAY == 86400
     assert WINDOW_ONE_WEEK == 604800
     assert WINDOW_THIRTY_DAYS == 2592000
+
+
+def test_allowed_windows():
+    assert len(ALLOWED_WINDOWS) == 5
+    assert WINDOW_ONE_HOUR in ALLOWED_WINDOWS
+    assert WINDOW_THREE_HOURS in ALLOWED_WINDOWS
+    assert WINDOW_ONE_DAY in ALLOWED_WINDOWS
+    assert WINDOW_ONE_WEEK in ALLOWED_WINDOWS
+    assert WINDOW_THIRTY_DAYS in ALLOWED_WINDOWS
+    assert 86401 not in ALLOWED_WINDOWS
 
 
 def test_default_deadline():
