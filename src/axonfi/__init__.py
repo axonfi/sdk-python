@@ -68,6 +68,7 @@ from .vault import (
     add_bot,
     deploy_vault,
     deposit,
+    operator_max_drain_per_day,
     remove_bot,
     update_bot_config,
 )
@@ -83,7 +84,7 @@ from .x402 import (
     parse_payment_required,
 )
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 
 __all__ = [
     # Client
@@ -159,6 +160,7 @@ __all__ = [
     "deposit",
     "BotConfigInput",
     "SpendingLimitInput",
+    "operator_max_drain_per_day",
     # x402
     "parse_payment_required",
     "parse_chain_id",

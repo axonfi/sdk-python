@@ -91,6 +91,32 @@ def _get_factory_address(chain_id: int, relayer_url: str | None = None) -> str:
 # Owner write operations
 # ============================================================================
 
+
+def operator_max_drain_per_day(
+    max_operator_bots: int,
+    max_bot_daily_limit: float,
+    vault_daily_aggregate: float = 0,
+) -> float:
+    """Compute max USD an operator-compromised wallet could drain per day.
+
+    Pure computation — no RPC call needed. Pass values from operator ceilings.
+
+    Args:
+        max_operator_bots: Maximum bots the operator can add.
+        max_bot_daily_limit: Per-bot daily limit in USD (e.g. 5000 = $5,000).
+        vault_daily_aggregate: Vault-wide daily aggregate cap in USD. 0 = no cap.
+
+    Returns:
+        Maximum daily drain in USD (e.g. 10000 = $10,000).
+    """
+    if max_operator_bots == 0 or max_bot_daily_limit == 0:
+        return 0
+    theoretical = max_operator_bots * max_bot_daily_limit
+    if vault_daily_aggregate > 0 and vault_daily_aggregate < theoretical:
+        return vault_daily_aggregate
+    return theoretical
+
+
 ZERO_REF = b"\x00" * 32
 
 
