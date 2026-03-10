@@ -107,10 +107,15 @@ def operator_max_drain_per_day(
         vault_daily_aggregate: Vault-wide daily aggregate cap in USD. 0 = no cap.
 
     Returns:
-        Maximum daily drain in USD (e.g. 10000 = $10,000).
+        Maximum daily drain in USD (e.g. 10000 = $10,000). ``float('inf')`` if unlimited.
     """
-    if max_operator_bots == 0 or max_bot_daily_limit == 0:
-        return 0
+    if max_operator_bots == 0:
+        return 0  # operator can't add bots → zero drain
+    if max_bot_daily_limit == 0:
+        # 0 = unlimited daily limit per bot
+        if vault_daily_aggregate > 0:
+            return vault_daily_aggregate
+        return float("inf")
     theoretical = max_operator_bots * max_bot_daily_limit
     if vault_daily_aggregate > 0 and vault_daily_aggregate < theoretical:
         return vault_daily_aggregate
