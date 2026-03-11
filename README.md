@@ -1,6 +1,6 @@
 # axonfi
 
-Python SDK for [Axon](https://axonfi.xyz) — treasury and payment infrastructure for autonomous AI agents.
+Python SDK for [Axon](https://axonfi.xyz) — agentic finance with secure vaults for autonomous AI agents.
 
 Axon lets bot operators deploy non-custodial vaults, register bot public keys, define spending policies, and let their bots make gasless payments — without bots ever touching private keys or gas.
 
@@ -86,17 +86,17 @@ deposit(w3, owner, vault_address, "USDC", 500.0)  # 500 USDC
 
 ### What Needs Gas vs. What's Gasless
 
-| Step | Who pays gas | Notes |
-|------|-------------|-------|
-| Deploy vault | Owner | ~0.001 ETH. One-time. |
-| Accept ToS | Owner | Wallet signature only (no gas). |
-| Register bot | Owner | ~0.0005 ETH. One per bot. |
-| Configure bot | Owner | ~0.0003 ETH. Only when changing limits. |
-| Deposit ETH | Depositor | Anyone can deposit. ETH sent directly. |
-| Deposit ERC-20 | Depositor | Anyone can deposit. SDK handles approve + deposit. |
-| **Pay** | **Free (relayer)** | **Bot signs EIP-712 intent. Axon pays gas.** |
-| **Execute (DeFi)** | **Free (relayer)** | **Bot signs intent. Axon pays gas.** |
-| **Swap (rebalance)** | **Free (relayer)** | **Bot signs intent. Axon pays gas.** |
+| Step                 | Who pays gas       | Notes                                              |
+| -------------------- | ------------------ | -------------------------------------------------- |
+| Deploy vault         | Owner              | ~0.001 ETH. One-time.                              |
+| Accept ToS           | Owner              | Wallet signature only (no gas).                    |
+| Register bot         | Owner              | ~0.0005 ETH. One per bot.                          |
+| Configure bot        | Owner              | ~0.0003 ETH. Only when changing limits.            |
+| Deposit ETH          | Depositor          | Anyone can deposit. ETH sent directly.             |
+| Deposit ERC-20       | Depositor          | Anyone can deposit. SDK handles approve + deposit. |
+| **Pay**              | **Free (relayer)** | **Bot signs EIP-712 intent. Axon pays gas.**       |
+| **Execute (DeFi)**   | **Free (relayer)** | **Bot signs intent. Axon pays gas.**               |
+| **Swap (rebalance)** | **Free (relayer)** | **Bot signs intent. Axon pays gas.**               |
 
 **The key insight:** Setup operations (deploy, add bot, deposit) require gas from the owner. Once setup is complete, all bot operations (payments, DeFi, swaps) are gasless — the bot never needs ETH. The relayer pays all execution gas.
 
@@ -171,18 +171,18 @@ result = client.pay(to="0x...", token=Token.USDC, amount=5)
 
 ### AxonClient / AxonClientSync
 
-| Method | Description |
-|--------|-------------|
-| `pay(to, token, amount, ...)` | Create, sign, and submit a payment |
+| Method                                               | Description                                                       |
+| ---------------------------------------------------- | ----------------------------------------------------------------- |
+| `pay(to, token, amount, ...)`                        | Create, sign, and submit a payment                                |
 | `execute(protocol, call_data, tokens, amounts, ...)` | DeFi protocol interaction (see [below](#defi-protocol-execution)) |
-| `swap(to_token, min_to_amount, ...)` | In-vault token swap |
-| `get_balance(token)` | Vault balance for a token |
-| `get_balances(tokens)` | Multiple balances in one call |
-| `is_active()` | Whether this bot is active |
-| `is_paused()` | Whether the vault is paused |
-| `get_vault_info()` | Owner, operator, paused, version |
-| `can_pay_to(destination)` | Destination whitelist/blacklist check |
-| `poll(request_id)` | Poll async payment status |
+| `swap(to_token, min_to_amount, ...)`                 | In-vault token swap                                               |
+| `get_balance(token)`                                 | Vault balance for a token                                         |
+| `get_balances(tokens)`                               | Multiple balances in one call                                     |
+| `is_active()`                                        | Whether this bot is active                                        |
+| `is_paused()`                                        | Whether the vault is paused                                       |
+| `get_vault_info()`                                   | Owner, operator, paused, version                                  |
+| `can_pay_to(destination)`                            | Destination whitelist/blacklist check                             |
+| `poll(request_id)`                                   | Poll async payment status                                         |
 
 ### Signing Utilities
 
@@ -258,10 +258,11 @@ result = await client.execute(
 ```
 
 **Vault setup (owner, one-time):** Two contracts must be approved via `approveProtocol()`:
+
 1. **USDC** (the token contract) — because the vault calls `approve()` on it directly
 2. **Trading** — because the vault calls `openTrade()` on it
 
-TradingStorage does *not* need to be approved — it's just an argument to `approve()`, not a contract the vault calls.
+TradingStorage does _not_ need to be approved — it's just an argument to `approve()`, not a contract the vault calls.
 
 > **Note:** Common tokens (USDC, USDT, WETH, etc.) are pre-approved globally via the Axon registry as default tokens, so you typically only need to approve the DeFi protocol contract itself. You only need to approve a token if it's uncommon and not in the registry defaults.
 
@@ -277,6 +278,7 @@ If `execute()` reverts with `ContractNotApproved`, the `protocol` address you're
 2. **The token contract isn't approved** — when doing a token approval (Step 1 above), the token must either be approved on the vault via `approveProtocol(tokenAddress)` or be a registry default token. Common tokens (USDC, USDT, WETH, DAI, etc.) are pre-approved globally by Axon, but uncommon tokens (e.g., stETH, aUSDC, cTokens) may need manual approval.
 
 **Example — Lido staking/unstaking:** To unstake stETH, Lido's withdrawal contract calls `transferFrom()` to pull stETH from your vault. You need:
+
 - `approveProtocol(stETH)` — so the vault can call `approve()` on the stETH token to grant Lido an allowance
 - `approveProtocol(lidoWithdrawalQueue)` — so the vault can call `requestWithdrawals()` on Lido
 

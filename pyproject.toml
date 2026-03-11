@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "axonfi"
 version = "0.11.0"
-description = "Python SDK for Axon — treasury and payment infrastructure for autonomous AI agents"
+description = "Python SDK for Axon — agentic finance with secure vaults for autonomous AI agents"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{ name = "Axon", email = "axonhq@proton.me" }]
-keywords = ["axon", "ai-agents", "crypto", "payments", "eip-712", "vault", "treasury"]
+keywords = ["axon", "agentic-finance", "ai-agents", "crypto", "payments", "eip-712", "vault", "secure-vaults"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
