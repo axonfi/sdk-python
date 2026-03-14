@@ -159,10 +159,14 @@ def deploy_vault(
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
     receipt: TxReceipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
-    # Extract vault address from VaultDeployed event (second indexed topic)
+    # Extract vault address from VaultDeployed event
+    # Event: VaultDeployed(address indexed owner, address indexed vault, uint16 version, address axonRegistry)
+    # topics[0] = event sig, topics[1] = owner, topics[2] = vault
+    vault_deployed_sig = Web3.keccak(text="VaultDeployed(address,address,uint16,address)").hex()
     for log in receipt.get("logs", []):
-        if len(log.get("topics", [])) >= 3:
-            vault_addr = "0x" + log["topics"][2].hex()[-40:]
+        topics = log.get("topics", [])
+        if len(topics) >= 3 and topics[0].hex() == vault_deployed_sig:
+            vault_addr = "0x" + topics[2].hex()[-40:]
             return Web3.to_checksum_address(vault_addr)
 
     raise RuntimeError("VaultDeployed event not found in transaction receipt")
