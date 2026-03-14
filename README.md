@@ -171,17 +171,17 @@ result = client.pay(to="0x...", token=Token.USDC, amount=5)
 
 ### AxonClient / AxonClientSync
 
-| Method                                               | Description                                                       |
-| ---------------------------------------------------- | ----------------------------------------------------------------- |
-| `pay(to, token, amount, ...)`                        | Create, sign, and submit a payment                                |
-| `execute(protocol, call_data, tokens, amounts, ...)` | DeFi protocol interaction (see [below](#defi-protocol-execution)) |
-| `swap(to_token, min_to_amount, ...)`                 | In-vault token swap                                               |
-| `get_balance(token)`                                 | Vault balance for a token                                         |
-| `get_balances(tokens)`                               | Multiple balances in one call                                     |
-| `is_active()`                                        | Whether this bot is active                                        |
-| `is_paused()`                                        | Whether the vault is paused                                       |
-| `get_vault_info()`                                   | Owner, operator, paused, version                                  |
-| `can_pay_to(destination)`                            | Destination whitelist/blacklist check                             |
+| Method                                                            | Description                                                       |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `pay(to, token, amount, ...)`                                     | Create, sign, and submit a payment                                |
+| `execute(protocol, call_data, tokens, amounts, ...)`              | DeFi protocol interaction (see [below](#defi-protocol-execution)) |
+| `swap(to_token, min_to_amount, from_token, max_from_amount, ...)` | In-vault token swap                                               |
+| `get_balance(token)`                                              | Vault balance for a token                                         |
+| `get_balances(tokens)`                                            | Multiple balances in one call                                     |
+| `is_active()`                                                     | Whether this bot is active                                        |
+| `is_paused()`                                                     | Whether the vault is paused                                       |
+| `get_vault_info()`                                                | Owner, operator, paused, version                                  |
+| `can_pay_to(destination)`                                         | Destination whitelist/blacklist check                             |
 | `poll(request_id)`                                   | Poll async payment status                                         |
 
 ### Signing Utilities

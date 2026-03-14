@@ -39,6 +39,8 @@ _SWAP_INTENT_TYPES = {
         {"name": "bot", "type": "address"},
         {"name": "toToken", "type": "address"},
         {"name": "minToAmount", "type": "uint256"},
+        {"name": "fromToken", "type": "address"},
+        {"name": "maxFromAmount", "type": "uint256"},
         {"name": "deadline", "type": "uint256"},
         {"name": "ref", "type": "bytes32"},
     ],
@@ -132,6 +134,8 @@ def sign_swap_intent(
         "bot": intent.bot,
         "toToken": intent.to_token,
         "minToAmount": intent.min_to_amount,
+        "fromToken": intent.from_token,
+        "maxFromAmount": intent.max_from_amount,
         "deadline": intent.deadline,
         "ref": _to_bytes32(intent.ref),
     }

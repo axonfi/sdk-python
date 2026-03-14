@@ -43,6 +43,8 @@ class SwapIntent:
     bot: str
     to_token: str
     min_to_amount: int
+    from_token: str  # Bot-signed to prevent relayer substitution
+    max_from_amount: int  # Bot-signed to prevent relayer substitution
     deadline: int
     ref: str
 
@@ -70,6 +72,8 @@ class PayInput:
     deadline: int | None = None
     ref: str | None = None  # Override ref bytes32 directly
     x402_funding: bool | None = None  # x402 bot-EOA funding flag
+    swap_from_token: str | None = None  # Source token for SWAP_REQUIRED auto-retry
+    swap_max_from_amount: int | float | str | None = None  # Max input for auto-retry
 
 
 @dataclass
@@ -98,15 +102,13 @@ class SwapInput:
 
     to_token: str
     min_to_amount: int | float | str
+    from_token: str  # Bot-signed — required
+    max_from_amount: int | float | str  # Bot-signed — required
 
     memo: str | None = None
     ref: str | None = None
     idempotency_key: str | None = None
     deadline: int | None = None
-
-    # Swap source
-    from_token: str | None = None
-    max_from_amount: int | float | str | None = None
 
 
 # ============================================================================

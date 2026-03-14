@@ -106,6 +106,8 @@ def test_sign_swap_intent_valid():
         bot=TEST_ACCOUNT.address,
         to_token="0x036CbD53842c5426634e7929541eC2318f3dCF7e",
         min_to_amount=900_000,
+        from_token="0x000000000000000000000000000000000000dEaD",
+        max_from_amount=1_000_000,
         deadline=DEADLINE,
         ref=encode_ref("test swap"),
     )

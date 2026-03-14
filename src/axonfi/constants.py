@@ -25,7 +25,10 @@ EXECUTE_INTENT_TYPEHASH: str = (
 
 SWAP_INTENT_TYPEHASH: str = (
     "0x"
-    + Web3.keccak(text="SwapIntent(address bot,address toToken,uint256 minToAmount,uint256 deadline,bytes32 ref)").hex()
+    + Web3.keccak(
+        text="SwapIntent(address bot,address toToken,uint256 minToAmount,"
+        "address fromToken,uint256 maxFromAmount,uint256 deadline,bytes32 ref)"
+    ).hex()
 )
 
 EIP712_DOMAIN_NAME = "AxonVault"

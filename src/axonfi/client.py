@@ -109,6 +109,8 @@ class AxonClient:
         deadline: int | None = None,
         ref: str | None = None,
         x402_funding: bool | None = None,
+        swap_from_token: str | None = None,
+        swap_max_from_amount: int | float | str | None = None,
     ) -> PaymentResult:
         """Create, sign, and submit a payment intent.
 
@@ -118,8 +120,9 @@ class AxonClient:
         - ``"rejected"``: payment was rejected -- reason field explains why
 
         If the vault doesn't hold enough of the payment token, the relayer returns
-        ``error_code='SWAP_REQUIRED'``. The SDK automatically signs a SwapIntent and
-        resubmits the payment with swap fields -- no action needed from the caller.
+        ``error_code='SWAP_REQUIRED'``. Provide ``swap_from_token`` and
+        ``swap_max_from_amount`` to enable auto-swap retry. Without them, a
+        ``ValueError`` is raised on SWAP_REQUIRED.
         """
         inp = PayInput(
             to=to,
@@ -135,17 +138,27 @@ class AxonClient:
             deadline=deadline,
             ref=ref,
             x402_funding=x402_funding,
+            swap_from_token=swap_from_token,
+            swap_max_from_amount=swap_max_from_amount,
         )
         intent = self._build_payment_intent(inp)
         signature = sign_payment(self._private_key, self.vault_address, self.chain_id, intent)
         result = await self._submit_payment(intent, signature, inp)
 
-        # If vault needs a token swap first, sign a SwapIntent and resubmit
+        # If vault needs a token swap first, sign a SwapIntent and resubmit.
+        # Bot must sign fromToken + maxFromAmount — caller provides via swap_from_token/swap_max_from_amount.
         if result.status == "rejected" and result.error_code == "SWAP_REQUIRED":
+            if not inp.swap_from_token or inp.swap_max_from_amount is None:
+                raise ValueError(
+                    "Vault lacks the payment token (SWAP_REQUIRED). "
+                    "Provide swap_from_token and swap_max_from_amount in pay() to enable auto-swap."
+                )
             swap_intent = SwapIntent(
                 bot=self.bot_address,
                 to_token=intent.token,  # swap TO the payment token
                 min_to_amount=intent.amount,  # need at least the payment amount
+                from_token=resolve_token(inp.swap_from_token, self.chain_id),
+                max_from_amount=parse_amount(inp.swap_max_from_amount, inp.swap_from_token),
                 deadline=intent.deadline,  # same deadline
                 ref=intent.ref,
             )
@@ -199,24 +212,24 @@ class AxonClient:
         self,
         to_token: str,
         min_to_amount: int | float | str,
+        from_token: str,
+        max_from_amount: int | float | str,
         *,
         memo: str | None = None,
         ref: str | None = None,
         idempotency_key: str | None = None,
         deadline: int | None = None,
-        from_token: str | None = None,
-        max_from_amount: int | float | str | None = None,
     ) -> PaymentResult:
         """Sign and submit an in-vault token swap."""
         inp = SwapInput(
             to_token=to_token,
             min_to_amount=min_to_amount,
+            from_token=from_token,
+            max_from_amount=max_from_amount,
             memo=memo,
             ref=ref,
             idempotency_key=idempotency_key,
             deadline=deadline,
-            from_token=from_token,
-            max_from_amount=max_from_amount,
         )
         intent = self._build_swap_intent(inp)
         signature = sign_swap_intent(self._private_key, self.vault_address, self.chain_id, intent)
@@ -584,6 +597,8 @@ class AxonClient:
             bot=self.bot_address,
             to_token=resolve_token(inp.to_token, self.chain_id),
             min_to_amount=parse_amount(inp.min_to_amount, inp.to_token),
+            from_token=resolve_token(inp.from_token, self.chain_id),
+            max_from_amount=parse_amount(inp.max_from_amount, inp.from_token),
             deadline=inp.deadline or self._default_deadline(),
             ref=self._resolve_ref(inp.memo, inp.ref),
         )
@@ -640,10 +655,12 @@ class AxonClient:
             "deadline": str(intent.deadline),
             "ref": intent.ref,
             "signature": signature,
-            # Swap fields
+            # Swap fields (all bot-signed)
             "swapSignature": swap_signature,
             "swapToToken": swap_intent.to_token,
             "swapMinToAmount": str(swap_intent.min_to_amount),
+            "swapFromToken": swap_intent.from_token,
+            "swapMaxFromAmount": str(swap_intent.max_from_amount),
             "swapDeadline": str(swap_intent.deadline),
             "swapRef": swap_intent.ref,
             # Off-chain metadata
@@ -693,12 +710,6 @@ class AxonClient:
 
     async def _submit_swap(self, intent: SwapIntent, signature: str, inp: SwapInput) -> PaymentResult:
         idem = inp.idempotency_key or str(uuid.uuid4())
-        from_token = resolve_token(inp.from_token, self.chain_id) if inp.from_token else None
-        max_from_amount = (
-            parse_amount(inp.max_from_amount, inp.from_token or inp.to_token)
-            if inp.max_from_amount is not None
-            else None
-        )
 
         body: dict[str, Any] = {
             "chainId": self.chain_id,
@@ -706,15 +717,13 @@ class AxonClient:
             "bot": intent.bot,
             "toToken": intent.to_token,
             "minToAmount": str(intent.min_to_amount),
+            "fromToken": intent.from_token,
+            "maxFromAmount": str(intent.max_from_amount),
             "deadline": str(intent.deadline),
             "ref": intent.ref,
             "signature": signature,
             "idempotencyKey": idem,
         }
-        if from_token is not None:
-            body["fromToken"] = from_token
-        if max_from_amount is not None:
-            body["maxFromAmount"] = str(max_from_amount)
         if inp.memo is not None:
             body["memo"] = inp.memo
         return await self._post(RelayerAPI.SWAP, idem, body)
@@ -801,8 +810,23 @@ class AxonClientSync:
             )
         )
 
-    def swap(self, to_token: str, min_to_amount: int | float | str, **kwargs) -> PaymentResult:
-        return self._run(self._async_client.swap(to_token=to_token, min_to_amount=min_to_amount, **kwargs))
+    def swap(
+        self,
+        to_token: str,
+        min_to_amount: int | float | str,
+        from_token: str,
+        max_from_amount: int | float | str,
+        **kwargs,
+    ) -> PaymentResult:
+        return self._run(
+            self._async_client.swap(
+                to_token=to_token,
+                min_to_amount=min_to_amount,
+                from_token=from_token,
+                max_from_amount=max_from_amount,
+                **kwargs,
+            )
+        )
 
     def get_balance(self, token: str) -> int:
         return self._run(self._async_client.get_balance(token))

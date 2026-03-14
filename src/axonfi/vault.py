@@ -247,6 +247,11 @@ def remove_bot(
 ) -> str:
     """Remove a bot from the vault whitelist.
 
+    Clears the bot's config and destination count. However, individual destination
+    whitelist entries persist in storage (Solidity cannot bulk-delete nested mappings).
+    If you re-register the same address, it will inherit stale whitelist entries.
+    Use a fresh keypair for new bots to avoid this.
+
     Args:
         w3: Web3 instance connected to the vault's chain.
         account: Owner or operator account.
