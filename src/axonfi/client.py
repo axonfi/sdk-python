@@ -773,10 +773,17 @@ class AxonClientSync:
             bot_private_key=bot_private_key,
             relayer_url=relayer_url,
         )
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     @property
     def bot_address(self) -> str:
         return self._async_client.bot_address
+
+    def _get_loop(self) -> asyncio.AbstractEventLoop:
+        """Get or create a persistent event loop for sync calls."""
+        if self._loop is None or self._loop.is_closed():
+            self._loop = asyncio.new_event_loop()
+        return self._loop
 
     def _run(self, coro):
         try:
@@ -791,7 +798,7 @@ class AxonClientSync:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 return pool.submit(asyncio.run, coro).result()
         else:
-            return asyncio.run(coro)
+            return self._get_loop().run_until_complete(coro)
 
     def pay(self, to: str, token: str, amount: int | float | str, **kwargs) -> PaymentResult:
         return self._run(self._async_client.pay(to=to, token=token, amount=amount, **kwargs))
