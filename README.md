@@ -178,6 +178,7 @@ result = client.pay(to="0x...", token=Token.USDC, amount=5)
 | `swap(to_token, min_to_amount, from_token, max_from_amount, ...)` | In-vault token swap                                               |
 | `get_balance(token)`                                              | Vault balance for a token                                         |
 | `get_balances(tokens)`                                            | Multiple balances in one call                                     |
+| `get_vault_value()`                                               | Total USD value with per-token breakdown                          |
 | `is_active()`                                                     | Whether this bot is active                                        |
 | `is_paused()`                                                     | Whether the vault is paused                                       |
 | `get_vault_info()`                                                | Owner, operator, paused, version                                  |
@@ -203,6 +204,22 @@ chain_id = Chain.BaseSepolia       # 84532
 usdc_addr = USDC[chain_id]        # 0x036CbD...
 decimals = KNOWN_TOKENS["USDC"].decimals  # 6
 ```
+
+### Vault Value
+
+Get the total USD value of your vault across all token holdings, with per-token breakdown and prices.
+
+```python
+value = await client.get_vault_value()
+
+print(f"Total vault value: ${value.total_value_usd}")
+for token in value.tokens:
+    print(f"  {token.symbol}: {token.balance} (${token.value_usd})")
+```
+
+Returns a `VaultValue` with:
+- `total_value_usd` — aggregate USD value across all holdings
+- `tokens` — list of `VaultTokenBalance`: `token`, `symbol`, `balance`, `decimals`, `price_usd`, `value_usd`
 
 ## DeFi Protocol Execution
 
@@ -335,8 +352,9 @@ Supports EIP-3009 (USDC, gasless) and Permit2 (any ERC-20) settlement schemes.
 
 | Chain        | ID    | Status      |
 | ------------ | ----- | ----------- |
-| Base         | 8453  | Coming soon |
-| Arbitrum One | 42161 | Coming soon |
+| Base         | 8453  | Live        |
+| Arbitrum One | 42161 | Live        |
+| Ethereum     | 1     | Coming soon |
 
 ### Testnet
 
