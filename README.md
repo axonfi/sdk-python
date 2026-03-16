@@ -2,7 +2,7 @@
 
 Python SDK for [Axon](https://axonfi.xyz) — agentic finance with secure vaults for autonomous AI agents.
 
-Axon lets bot operators deploy non-custodial vaults, register bot public keys, define spending policies, and let their bots make gasless payments — without bots ever touching private keys or gas.
+Axon lets bot operators deploy non-custodial vaults, register bot public keys, define spending policies, and let their bots make gasless payments — without bots ever holding funds or paying gas.
 
 ## Features
 
