@@ -16,7 +16,7 @@ from .constants import DEFAULT_DEADLINE_SECONDS, RELAYER_URL, USDC, RelayerAPI
 from .eip3009 import USDC_EIP712_DOMAIN, random_nonce, sign_transfer_with_authorization
 from .permit2 import X402_PROXY_ADDRESS, random_permit2_nonce, sign_permit2_witness_transfer
 from .signer import encode_ref, sign_execute_intent, sign_payment, sign_swap_intent
-from .tokens import resolve_token
+from .tokens import KNOWN_TOKENS, resolve_token
 from .types import (
     DestinationCheckResult,
     ExecuteInput,
@@ -80,6 +80,45 @@ class AxonClient:
     def bot_address(self) -> str:
         """The bot's address derived from the private key."""
         return self._account.address
+
+    @property
+    def usdc_address(self) -> str:
+        """USDC contract address for the client's chain."""
+        addr = USDC.get(self.chain_id)
+        if not addr:
+            raise ValueError(f"No USDC address for chain {self.chain_id}")
+        return addr
+
+    def token_address(self, symbol: str) -> str:
+        """Return the on-chain address of a known token for the client's chain.
+
+        Args:
+            symbol: Token symbol (e.g. ``"WETH"``, ``"USDC"``, ``"DAI"``).
+
+        Raises:
+            ValueError: If the symbol is unknown or not available on this chain.
+        """
+        entry = KNOWN_TOKENS.get(symbol)
+        if not entry:
+            raise ValueError(f"Unknown token symbol: {symbol}")
+        addr = entry.addresses.get(self.chain_id)
+        if not addr:
+            raise ValueError(f"Token {symbol} is not available on chain {self.chain_id}")
+        return addr
+
+    def token_decimals(self, symbol: str) -> int:
+        """Return the decimal count for a known token.
+
+        Args:
+            symbol: Token symbol (e.g. ``"USDC"``, ``"WETH"``).
+
+        Raises:
+            ValueError: If the symbol is unknown.
+        """
+        entry = KNOWN_TOKENS.get(symbol)
+        if not entry:
+            raise ValueError(f"Unknown token symbol: {symbol}")
+        return entry.decimals
 
     async def _client(self) -> httpx.AsyncClient:
         if self._http is None or self._http.is_closed:
@@ -802,6 +841,19 @@ class AxonClientSync:
     @property
     def bot_address(self) -> str:
         return self._async_client.bot_address
+
+    @property
+    def usdc_address(self) -> str:
+        """USDC contract address for the client's chain."""
+        return self._async_client.usdc_address
+
+    def token_address(self, symbol: str) -> str:
+        """Return the on-chain address of a known token for the client's chain."""
+        return self._async_client.token_address(symbol)
+
+    def token_decimals(self, symbol: str) -> int:
+        """Return the decimal count for a known token."""
+        return self._async_client.token_decimals(symbol)
 
     def _get_loop(self) -> asyncio.AbstractEventLoop:
         """Get or create a persistent event loop for sync calls."""

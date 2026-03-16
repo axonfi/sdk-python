@@ -195,10 +195,23 @@ intent = PaymentIntent(bot="0x...", to="0x...", token="0x...", amount=1000000, d
 signature = sign_payment(private_key, vault_address, chain_id, intent)
 ```
 
-### Constants
+### Token Helpers
+
+Convenience methods on the client for looking up token addresses and decimals:
 
 ```python
-from axonfi import Chain, USDC, Token, KNOWN_TOKENS
+client.usdc_address              # "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+client.token_address("WETH")     # "0x4200000000000000000000000000000000000006"
+client.token_decimals("USDC")    # 6
+client.token_decimals("WETH")    # 18
+```
+
+### Constants
+
+Chain enums, token symbols, and raw lookup dicts are also available as direct imports:
+
+```python
+from axonfi import Chain, Token, USDC, KNOWN_TOKENS
 
 chain_id = Chain.BaseSepolia       # 84532
 usdc_addr = USDC[chain_id]        # 0x036CbD...
