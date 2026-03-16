@@ -167,6 +167,28 @@ class TosStatus:
 
 
 @dataclass
+class VaultTokenBalance:
+    """Balance and USD value of a single token in a vault."""
+
+    token: str
+    symbol: str
+    balance: str
+    decimals: int
+    price_usd: float
+    value_usd: float
+
+
+@dataclass
+class VaultValue:
+    """Total USD value of a vault and per-token breakdown."""
+
+    vault: str
+    chain_id: int
+    total_value_usd: float
+    tokens: list[VaultTokenBalance]
+
+
+@dataclass
 class AxonClientConfig:
     """Configuration for AxonClient."""
 

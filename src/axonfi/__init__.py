@@ -61,6 +61,8 @@ from .types import (
     SwapIntent,
     TosStatus,
     VaultInfo,
+    VaultTokenBalance,
+    VaultValue,
 )
 from .vault import (
     BotConfigInput,
@@ -143,6 +145,8 @@ __all__ = [
     "DestinationCheckResult",
     "RebalanceTokensResult",
     "TosStatus",
+    "VaultTokenBalance",
+    "VaultValue",
     # EIP-3009
     "sign_transfer_with_authorization",
     "random_nonce",

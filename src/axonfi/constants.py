@@ -213,5 +213,9 @@ class RelayerAPI:
         return f"/v1/vault/{vault}/rebalance-token/{token}?chainId={chain_id}"
 
     @staticmethod
+    def vault_value(vault: str, chain_id: int) -> str:
+        return f"/v1/vault/{vault}/value?chainId={chain_id}"
+
+    @staticmethod
     def tos_status(wallet: str) -> str:
         return f"/v1/tos/status?wallet={wallet}"

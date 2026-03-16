@@ -29,6 +29,8 @@ from .types import (
     SwapIntent,
     TosStatus,
     VaultInfo,
+    VaultTokenBalance,
+    VaultValue,
 )
 from .x402 import (
     X402HandleResult,
@@ -482,6 +484,28 @@ class AxonClient:
             rebalance_token_count=data["rebalanceTokenCount"],
         )
 
+    async def get_vault_value(self) -> VaultValue:
+        """Total USD value of the vault with per-token breakdown."""
+        path = RelayerAPI.vault_value(self.vault_address, self.chain_id)
+        data = await self._get(path)
+        tokens = [
+            VaultTokenBalance(
+                token=t["token"],
+                symbol=t["symbol"],
+                balance=t["balance"],
+                decimals=t["decimals"],
+                price_usd=t["priceUsd"],
+                value_usd=t["valueUsd"],
+            )
+            for t in data["tokens"]
+        ]
+        return VaultValue(
+            vault=data["vault"],
+            chain_id=data["chainId"],
+            total_value_usd=data["totalValueUsd"],
+            tokens=tokens,
+        )
+
     # ========================================================================
     # Polling
     # ========================================================================
@@ -858,6 +882,9 @@ class AxonClientSync:
 
     def get_rebalance_tokens(self) -> RebalanceTokensResult:
         return self._run(self._async_client.get_rebalance_tokens())
+
+    def get_vault_value(self) -> VaultValue:
+        return self._run(self._async_client.get_vault_value())
 
     def x402_fund(self, amount: int, token: str | None = None, **kwargs) -> PaymentResult:
         return self._run(self._async_client.x402_fund(amount, token, **kwargs))
